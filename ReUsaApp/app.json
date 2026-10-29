@@ -39,6 +39,16 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      "expo-sqlite",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "ReUsa usa la cámara para tomar la foto del objeto a donar.",
+          "photosPermission": "ReUsa accede a tus fotos solo cuando eliges una foto del objeto.",
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {
