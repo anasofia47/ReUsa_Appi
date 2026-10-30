@@ -84,6 +84,7 @@ export interface ProductRequest {
   userName: string;
   applicantName?: string;
   status: RequestStatus;
+  rejectionReason?: string | null;
   clientRequestId: string;
   requestedAt: string;
   resolvedAt: string | null;

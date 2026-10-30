@@ -28,6 +28,7 @@ import type { Item, LocalRequest, RequestAction } from '@/types';
 
 type Filter = 'open' | 'all';
 type SupervisorTab = 'moderation' | 'requests';
+type StudentTab = 'received' | 'sent';
 
 export default function RequestsScreen() {
   const theme = useTheme();
@@ -38,23 +39,27 @@ export default function RequestsScreen() {
 
   const isSupervisorOrAdmin = user?.role === 'supervisor' || user?.role === 'admin';
 
-  // Si viene por parámetro tab=moderation o es supervisor, selecciona tab inicial
+  // Supervisor tabs
   const [supervisorTab, setSupervisorTab] = useState<SupervisorTab>(
     params.tab === 'requests' ? 'requests' : 'moderation',
   );
+
+  // Student tabs: Peticiones recibidas (para aceptar/rechazar) vs Mis solicitudes enviadas
+  const [studentTab, setStudentTab] = useState<StudentTab>('received');
 
   useEffect(() => {
     if (params.tab === 'moderation') {
       setSupervisorTab('moderation');
     } else if (params.tab === 'requests') {
       setSupervisorTab('requests');
+      setStudentTab('received');
     }
   }, [params.tab]);
 
   const [filter, setFilter] = useState<Filter>('open');
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  // Estado para moderación de publicaciones
+  // Estado para moderación de publicaciones (Supervisor)
   const [pendingItems, setPendingItems] = useState<Item[]>([]);
   const [loadingPending, setLoadingPending] = useState(false);
   const [rejectingItem, setRejectingItem] = useState<Item | null>(null);
@@ -68,7 +73,7 @@ export default function RequestsScreen() {
       const res = await api.get<{ items: Item[] }>('/api/items?status=pending_approval');
       setPendingItems(res.items || []);
     } catch {
-      // Ignorar errores temporales
+      // Silenciar errores temporales
     } finally {
       setLoadingPending(false);
     }
@@ -115,15 +120,36 @@ export default function RequestsScreen() {
     }
   }
 
-  const visibleRequests =
+  // Filtrado de solicitudes para estudiantes
+  const receivedRequests = requests.filter((r) => r.publisherId === user?.uid);
+  const sentRequests = requests.filter((r) => r.publisherId !== user?.uid);
+  const pendingReceivedCount = receivedRequests.filter((r) => r.status === 'requested').length;
+
+  const currentStudentList = studentTab === 'received' ? receivedRequests : sentRequests;
+  const visibleStudentRequests =
+    filter === 'open'
+      ? currentStudentList.filter((r) => r.status === 'requested' || r.status === 'approved')
+      : currentStudentList;
+
+  const visibleSupervisorRequests =
     filter === 'open'
       ? requests.filter((r) => r.status === 'requested' || r.status === 'approved')
       : requests;
+
+  const visibleList = isSupervisorOrAdmin ? visibleSupervisorRequests : visibleStudentRequests;
 
   async function onAction(req: LocalRequest, action: RequestAction) {
     setBusyId(req.id);
     try {
       await transitionRequest(req.id, action);
+      if (action === 'approve') {
+        Alert.alert(
+          'Solicitud aceptada',
+          'Has confirmado la donación a este estudiante. Las demás solicitudes pendientes de este objeto se cancelaron automáticamente.',
+        );
+      } else if (action === 'deliver') {
+        Alert.alert('¡Entrega realizada!', 'El objeto fue entregado y retirado del catálogo.');
+      }
     } catch (err) {
       Alert.alert('No se pudo completar la acción', describeError(err));
     } finally {
@@ -135,13 +161,13 @@ export default function RequestsScreen() {
     <Screen>
       <View style={styles.header}>
         <ThemedText type="subtitle" accessibilityRole="header">
-          {isSupervisorOrAdmin ? 'Panel de Gestión y Moderación' : 'Mis Solicitudes y Entregas'}
+          {isSupervisorOrAdmin ? 'Panel de Gestión y Moderación' : 'Peticiones y Entregas'}
         </ThemedText>
         <ConnectionBanner />
 
-        {/* Pestañas de Supervisor: Moderar Publicaciones vs Solicitudes de Estudiantes */}
+        {/* Pestañas de Supervisor */}
         {isSupervisorOrAdmin ? (
-          <View style={styles.supervisorTabs}>
+          <View style={styles.tabRow}>
             <Pressable
               onPress={() => setSupervisorTab('moderation')}
               style={[
@@ -180,9 +206,50 @@ export default function RequestsScreen() {
               </ThemedText>
             </Pressable>
           </View>
-        ) : null}
+        ) : (
+          /* Pestañas de Estudiante: Recibidas vs Mis Solicitudes */
+          <View style={styles.tabRow}>
+            <Pressable
+              onPress={() => setStudentTab('received')}
+              style={[
+                styles.tabBtn,
+                studentTab === 'received' && {
+                  borderBottomColor: theme.primary,
+                  borderBottomWidth: 3,
+                },
+              ]}>
+              <ThemedText
+                type="smallBold"
+                style={{
+                  color: studentTab === 'received' ? theme.primary : theme.textSecondary,
+                  fontSize: 14,
+                }}>
+                Peticiones Recibidas ({pendingReceivedCount})
+              </ThemedText>
+            </Pressable>
 
-        {/* Filtro secundario para lista de peticiones */}
+            <Pressable
+              onPress={() => setStudentTab('sent')}
+              style={[
+                styles.tabBtn,
+                studentTab === 'sent' && {
+                  borderBottomColor: theme.primary,
+                  borderBottomWidth: 3,
+                },
+              ]}>
+              <ThemedText
+                type="smallBold"
+                style={{
+                  color: studentTab === 'sent' ? theme.primary : theme.textSecondary,
+                  fontSize: 14,
+                }}>
+                Mis Solicitudes ({sentRequests.length})
+              </ThemedText>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Filtro secundario: Pendientes / En curso vs Todas */}
         {(!isSupervisorOrAdmin || supervisorTab === 'requests') && (
           <View style={styles.filters}>
             {(['open', 'all'] as const).map((f) => {
@@ -306,7 +373,7 @@ export default function RequestsScreen() {
       ) : (
         /* VISTA 2: Solicitudes de Donación entre estudiantes */
         <FlatList
-          data={visibleRequests}
+          data={visibleList}
           keyExtractor={(r) => r.id}
           renderItem={({ item }) => (
             <RequestCard
@@ -322,7 +389,7 @@ export default function RequestsScreen() {
           contentContainerStyle={[styles.list, { paddingBottom: BottomTabInset + Spacing.four }]}
           refreshControl={
             <RefreshControl
-              refreshing={syncing && visibleRequests.length > 0}
+              refreshing={syncing && visibleList.length > 0}
               onRefresh={() => void syncNow()}
             />
           }
@@ -333,8 +400,18 @@ export default function RequestsScreen() {
               <ErrorView message={lastError ?? 'Error desconocido'} onRetry={() => void syncNow()} />
             ) : (
               <EmptyView
-                title={filter === 'open' ? 'Sin solicitudes pendientes' : 'Aún no hay solicitudes'}
-                message="Cuando solicites o recibas peticiones de donación aparecerán aquí."
+                title={
+                  !isSupervisorOrAdmin && studentTab === 'received'
+                    ? 'No tienes peticiones de interesados'
+                    : filter === 'open'
+                      ? 'Sin solicitudes pendientes'
+                      : 'Aún no hay solicitudes'
+                }
+                message={
+                  !isSupervisorOrAdmin && studentTab === 'received'
+                    ? 'Cuando otros estudiantes soliciten tus donaciones aprobadas, aparecerán aquí para que las aceptes o rechaces.'
+                    : 'Cuando solicites o recibas peticiones de donación aparecerán aquí.'
+                }
               />
             )
           }
@@ -399,7 +476,7 @@ export default function RequestsScreen() {
 
 const styles = StyleSheet.create({
   header: { gap: Spacing.two, paddingTop: Spacing.two, paddingBottom: Spacing.two },
-  supervisorTabs: {
+  tabRow: {
     flexDirection: 'row',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#ccc',

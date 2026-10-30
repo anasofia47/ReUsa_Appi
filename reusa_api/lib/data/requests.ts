@@ -15,6 +15,7 @@ function toRequest(id: string, data: Omit<ItemRequest, "id">): ItemRequest {
     userId: data.applicantId,
     userEmail: data.applicantEmail,
     userName: data.applicantName,
+    rejectionReason: (data as any).rejectionReason ?? null,
   };
 }
 
@@ -96,13 +97,40 @@ export async function listRequests(
   options: { type?: "all" | "sent" | "received"; status?: RequestStatus; updatedSince?: string } = {},
 ): Promise<ItemRequest[]> {
   const firestore = db();
+  const isPrivileged = user.role === "supervisor" || user.role === "admin";
+
+  // Si no se especifica 'type' y es un estudiante, retornar tanto las peticiones recibidas como las enviadas
+  if (!options.type && !isPrivileged) {
+    let qReceived = firestore.collection(REQUESTS).where("publisherId", "==", user.uid);
+    let qSent = firestore.collection(REQUESTS).where("applicantId", "==", user.uid);
+
+    if (options.updatedSince) {
+      qReceived = qReceived.where("updatedAt", ">", options.updatedSince);
+      qSent = qSent.where("updatedAt", ">", options.updatedSince);
+    }
+    if (options.status) {
+      qReceived = qReceived.where("status", "==", options.status);
+      qSent = qSent.where("status", "==", options.status);
+    }
+
+    const [receivedSnap, sentSnap] = await Promise.all([qReceived.get(), qSent.get()]);
+    const seen = new Set<string>();
+    const list: ItemRequest[] = [];
+    for (const d of [...receivedSnap.docs, ...sentSnap.docs]) {
+      if (!seen.has(d.id)) {
+        seen.add(d.id);
+        list.push(toRequest(d.id, d.data() as Omit<ItemRequest, "id">));
+      }
+    }
+    return list.sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+  }
+
   let query: FirebaseFirestore.Query = firestore.collection(REQUESTS);
 
   if (options.updatedSince) {
     query = query.where("updatedAt", ">", options.updatedSince);
   }
 
-  const isPrivileged = user.role === "supervisor" || user.role === "admin";
   const type = options.type ?? (isPrivileged ? "all" : "received");
 
   if (type === "sent") {
@@ -147,6 +175,12 @@ export async function transitionRequest(
   const firestore = db();
   const requestRef = firestore.collection(REQUESTS).doc(id);
 
+  interface AutoRejected {
+    applicantId: string;
+    itemTitle: string;
+  }
+  const autoRejectedList: AutoRejected[] = [];
+
   const out = await firestore.runTransaction(async (tx) => {
     const snap = await tx.get(requestRef);
     if (!snap.exists) throw new ApiError(404, "NOT_FOUND", "Solicitud no encontrada");
@@ -160,14 +194,24 @@ export async function transitionRequest(
 
     // Firestore requiere que todas las lecturas se ejecuten antes de cualquier escritura
     let othersDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
-    if (action === "deliver") {
+    if (action === "approve" || action === "deliver") {
       const othersSnap = await tx.get(
         firestore
           .collection(REQUESTS)
           .where("itemId", "==", current.itemId)
-          .where("status", "in", ["requested", "approved"]),
+          .where("status", "in", ["requested", "approved", "delivered"]),
       );
       othersDocs = othersSnap.docs;
+    }
+
+    // Si se intenta aceptar ('approve'), impedir si el objeto ya fue aceptado o entregado a otra persona
+    if (action === "approve") {
+      const alreadyCommitted = othersDocs.some(
+        (d) => d.id !== current.id && (d.data().status === "approved" || d.data().status === "delivered"),
+      );
+      if (alreadyCommitted) {
+        throw new ApiError(409, "ITEM_NOT_AVAILABLE", "Este objeto ya fue aceptado o donado a otro estudiante");
+      }
     }
 
     const now = new Date();
@@ -188,15 +232,18 @@ export async function transitionRequest(
       });
     }
 
-    if (action === "deliver") {
-      // Rechazar otras peticiones que estaban esperando este mismo objeto
+    // Al aceptar (approve) o entregar (deliver), rechazar automáticamente cualquier otra petición de este objeto
+    if (action === "approve" || action === "deliver") {
       for (const otherDoc of othersDocs) {
-        if (otherDoc.id !== current.id) {
+        if (otherDoc.id !== current.id && otherDoc.data().status === "requested") {
           tx.update(otherDoc.ref, {
             status: "rejected",
+            rejectionReason: "Objeto ya donado a otro solicitante",
             resolvedAt: nowIso,
             updatedAt: nowIso,
           });
+          const d = otherDoc.data();
+          autoRejectedList.push({ applicantId: d.applicantId, itemTitle: d.itemTitle });
         }
       }
     }
@@ -204,7 +251,18 @@ export async function transitionRequest(
     return { ...current, ...result, updatedAt: nowIso };
   });
 
-  // Notificar al solicitante según la acción realizada
+  // Notificar a los otros solicitantes que el objeto ya fue asignado/donado
+  for (const rejected of autoRejectedList) {
+    createNotification({
+      userId: rejected.applicantId,
+      title: "Objeto ya donado a otro solicitante",
+      message: `El objeto "${rejected.itemTitle}" que solicitaste fue asignado y donado a otro estudiante.`,
+      targetPath: "/requests",
+      type: "request_resolved",
+    }).catch((err) => console.error("Error enviando notificación de objeto ya donado:", err));
+  }
+
+  // Notificar al solicitante principal según la acción realizada
   if (action === "approve") {
     createNotification({
       userId: out.applicantId,
@@ -224,8 +282,8 @@ export async function transitionRequest(
   } else if (action === "deliver") {
     createNotification({
       userId: out.applicantId,
-      title: "Donación entregada con éxito",
-      message: `${user.name} confirmó la entrega de "${out.itemTitle}". ¡Gracias por reutilizar!`,
+      title: "¡Entrega de donación completada!",
+      message: `Se confirmó la entrega de "${out.itemTitle}". ¡Que disfrutes tu nuevo artículo de estudio!`,
       targetPath: "/requests",
       type: "request_resolved",
     }).catch((err) => console.error("Error enviando notificación:", err));

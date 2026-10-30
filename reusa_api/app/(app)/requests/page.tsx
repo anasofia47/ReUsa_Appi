@@ -75,7 +75,7 @@ async function RequestsContent({
                       {req.itemTitle}
                     </Link>
                   </h3>
-                  <RequestStatusBadge status={req.status} />
+                  <RequestStatusBadge status={req.status} reason={req.rejectionReason} />
                 </div>
 
                 {currentTab === "received" ? (

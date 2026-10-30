@@ -60,6 +60,7 @@ export interface ItemRequest {
   applicantPhone: string;
   message: string;
   status: RequestStatus;
+  rejectionReason?: string | null;
   /** Llave de idempotencia generada por el cliente (soporte offline). */
   clientRequestId: string;
   requestedAt: string;

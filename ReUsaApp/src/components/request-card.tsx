@@ -46,23 +46,31 @@ export function RequestCard({
   const conflict = request.syncState === 'conflict';
   const pending = request.syncState === 'pending';
 
+  const isDonatedToOther =
+    request.status === 'rejected' &&
+    request.rejectionReason?.toLowerCase().includes('donado');
+
   const statusColor = conflict
     ? theme.danger
     : pending
       ? theme.warning
-      : request.status === 'delivered'
-        ? theme.success
-        : request.status === 'approved'
-          ? theme.primary
-          : request.status === 'rejected'
-            ? theme.danger
-            : theme.textSecondary;
+      : isDonatedToOther
+        ? theme.warning
+        : request.status === 'delivered'
+          ? theme.success
+          : request.status === 'approved'
+            ? theme.primary
+            : request.status === 'rejected'
+              ? theme.danger
+              : theme.textSecondary;
 
   const statusText = conflict
     ? 'No se pudo solicitar'
     : pending
       ? 'Pendiente de envío'
-      : STATUS_LABEL[request.status];
+      : isDonatedToOther
+        ? 'Ya donado a otro solicitante'
+        : request.rejectionReason || STATUS_LABEL[request.status];
 
   return (
     <View

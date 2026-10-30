@@ -62,7 +62,20 @@ export function ItemStatusBadge({ status }: { status: ItemStatus }) {
   return <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}>{label}</span>;
 }
 
-export function RequestStatusBadge({ status }: { status: RequestStatus }) {
+export function RequestStatusBadge({
+  status,
+  reason,
+}: {
+  status: RequestStatus;
+  reason?: string | null;
+}) {
+  if (status === "rejected" && reason?.toLowerCase().includes("donado")) {
+    return (
+      <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+        Ya donado a otro solicitante
+      </span>
+    );
+  }
   const { label, className } = REQUEST_BADGES[status] ?? { label: status, className: "bg-zinc-200 text-zinc-700" };
   return <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}>{label}</span>;
 }

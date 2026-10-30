@@ -320,7 +320,8 @@ export function createRequestsRepo(db: SQLiteDatabase) {
     async list(userId: string | null): Promise<LocalRequest[]> {
       const rows = userId
         ? await db.getAllAsync<RequestRow>(
-            'SELECT * FROM requests WHERE user_id = ? ORDER BY requested_at DESC',
+            'SELECT * FROM requests WHERE user_id = ? OR publisher_id = ? ORDER BY requested_at DESC',
+            userId,
             userId,
           )
         : await db.getAllAsync<RequestRow>('SELECT * FROM requests ORDER BY requested_at DESC');
