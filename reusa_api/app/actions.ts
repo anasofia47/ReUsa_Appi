@@ -31,15 +31,23 @@ function messageOf(err: unknown): string {
 }
 
 export async function loginAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  console.log("[loginAction] step 1: parsing form");
   const parsed = loginSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
 
   try {
+    console.log("[loginAction] step 2: calling login()");
     const { tokens } = await login(parsed.data.email, parsed.data.password);
-    await setSessionCookie(await createSessionCookie(tokens.idToken));
+    console.log("[loginAction] step 3: login ok, creating session cookie");
+    const sessionCookie = await createSessionCookie(tokens.idToken);
+    console.log("[loginAction] step 4: cookie created, setting cookie");
+    await setSessionCookie(sessionCookie);
+    console.log("[loginAction] step 5: cookie set, redirecting");
   } catch (err) {
+    console.error("[loginAction] catch error:", err);
     return { error: messageOf(err) };
   }
+  console.log("[loginAction] step 6: calling redirect");
   redirect("/items");
 }
 

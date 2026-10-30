@@ -1,4 +1,5 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { Platform } from 'react-native';
 
 export const DATABASE_VERSION = 2;
 
@@ -7,7 +8,13 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
   let version = row?.user_version ?? 0;
   if (version >= DATABASE_VERSION) return;
 
-  await db.execAsync('PRAGMA journal_mode = WAL;');
+  if (Platform.OS !== 'web') {
+    try {
+      await db.execAsync('PRAGMA journal_mode = WAL;');
+    } catch {
+      // Ignorar si el motor subyacente no soporta WAL
+    }
+  }
   await db.execAsync('PRAGMA foreign_keys = ON;');
 
   if (version < 1) {

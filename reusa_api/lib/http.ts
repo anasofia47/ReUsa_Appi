@@ -3,11 +3,19 @@ import { NextResponse } from "next/server";
 import { ZodError, type ZodType } from "zod";
 import { ApiError } from "./errors";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Credentials": "true",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+  "Access-Control-Allow-Headers":
+    "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization",
+};
+
 export function errorResponse(err: unknown): NextResponse {
   if (err instanceof ApiError) {
     return NextResponse.json(
       { error: { code: err.code, message: err.message, details: err.details } },
-      { status: err.status },
+      { status: err.status, headers: CORS_HEADERS },
     );
   }
   if (err instanceof ZodError) {
@@ -19,13 +27,13 @@ export function errorResponse(err: unknown): NextResponse {
           details: err.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
         },
       },
-      { status: 400 },
+      { status: 400, headers: CORS_HEADERS },
     );
   }
   console.error("[api] error no controlado:", err);
   return NextResponse.json(
     { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor" } },
-    { status: 500 },
+    { status: 500, headers: CORS_HEADERS },
   );
 }
 
@@ -33,8 +41,20 @@ type Handler<C> = (request: Request, ctx: C) => Promise<Response>;
 
 export function route<C = unknown>(handler: Handler<C>): Handler<C> {
   return async (request, ctx) => {
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: CORS_HEADERS,
+      });
+    }
     try {
-      return await handler(request, ctx);
+      const res = await handler(request, ctx);
+      for (const [key, value] of Object.entries(CORS_HEADERS)) {
+        if (!res.headers.has(key)) {
+          res.headers.set(key, value);
+        }
+      }
+      return res;
     } catch (err) {
       unstable_rethrow(err);
       return errorResponse(err);
