@@ -27,7 +27,7 @@ export interface FormState {
 function messageOf(err: unknown): string {
   if (err instanceof ApiError) return err.message;
   console.error("[web] error no controlado:", err);
-  return "Ocurrió un error inesperado. Inténtalo de nuevo.";
+  return err instanceof Error ? err.message : "Ocurrió un error inesperado. Inténtalo de nuevo.";
 }
 
 export async function loginAction(_prev: FormState, formData: FormData): Promise<FormState> {

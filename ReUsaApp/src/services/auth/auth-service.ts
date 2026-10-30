@@ -68,6 +68,7 @@ export function createAuthService(publicApi: Pick<ApiClient, 'post'>, session: S
           email: email.trim(),
           password,
           sex,
+          gender: sex,
           role,
           supervisorSecret,
         },

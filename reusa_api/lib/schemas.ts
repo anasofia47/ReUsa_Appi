@@ -9,12 +9,20 @@ export const loginSchema = z.object({
   password: z.string().min(1, "La contraseña es obligatoria"),
 });
 
-export const registerSchema = z.object({
-  email: emailField,
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-  displayName: z.string().trim().min(2, "El nombre debe tener al menos 2 caracteres").max(80),
-  gender: z.enum(["masculino", "femenino", "otro"]).default("otro"),
-});
+export const registerSchema = z
+  .object({
+    email: emailField,
+    password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+    displayName: z.string().trim().min(2, "El nombre debe tener al menos 2 caracteres").max(80),
+    gender: z.enum(["masculino", "femenino", "otro"]).optional(),
+    sex: z.enum(["masculino", "femenino", "otro"]).optional(),
+    role: z.enum(["student", "supervisor", "admin"]).optional(),
+    supervisorSecret: z.string().optional(),
+  })
+  .transform((data) => ({
+    ...data,
+    gender: data.gender ?? data.sex ?? "otro",
+  }));
 
 export const refreshSchema = z.object({
   refreshToken: z.string().min(1),
