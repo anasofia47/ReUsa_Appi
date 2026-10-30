@@ -35,6 +35,7 @@ export default function PublishScreen() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Académico');
   const [description, setDescription] = useState('');
+  const [deliveryPoint, setDeliveryPoint] = useState('Campus TdeA - Bloque 1 Cafetería');
   const [state, setState] = useState<'nuevo' | 'usado_bueno' | 'usado_regular'>('usado_bueno');
   const [sex, setSex] = useState<Sex>('otro');
   const [cover, setCover] = useState<PickedCover | null>(null);
@@ -83,11 +84,15 @@ export default function PublishScreen() {
     setLoading(true);
     setFeedback(null);
     try {
+      const condition =
+        state === 'nuevo' ? 'Nuevo' : state === 'usado_bueno' ? 'Buen estado' : 'Aceptable';
       const { item } = await api.post<{ item: Item }>('/api/items', {
         title: title.trim(),
         category: category.trim(),
         description: description.trim(),
         state,
+        condition,
+        deliveryPoint: deliveryPoint.trim() || 'Campus TdeA - Bloque 1 Cafetería',
         sex,
       });
 
@@ -103,6 +108,7 @@ export default function PublishScreen() {
       );
       setTitle('');
       setDescription('');
+      setDeliveryPoint('Campus TdeA - Bloque 1 Cafetería');
       setCover(null);
       void syncNow();
     } catch (err) {
@@ -146,6 +152,13 @@ export default function PublishScreen() {
             value={category}
             onChangeText={setCategory}
             placeholder="Ej. Académico, Tecnología, Ropa, Libros..."
+          />
+
+          <TextField
+            label="Punto de entrega en el campus"
+            value={deliveryPoint}
+            onChangeText={setDeliveryPoint}
+            placeholder="Ej. Bloque 1 - Cafetería, Biblioteca Bloque 2..."
           />
 
           {/* Estado del objeto */}

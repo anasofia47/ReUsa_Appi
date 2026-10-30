@@ -40,14 +40,34 @@ export const coverSchema = z.object({
     .regex(/^[A-Za-z0-9+/]+={0,2}$/, "Base64 inválido"),
 });
 
-export const createItemSchema = z.object({
-  title: z.string().trim().min(3, "El título debe tener al menos 3 caracteres").max(120),
-  description: z.string().trim().min(10, "La descripción debe tener al menos 10 caracteres").max(1000),
-  category: z.string().trim().min(2, "Categoría inválida").max(50),
-  condition: z.enum(["Nuevo", "Como nuevo", "Buen estado", "Aceptable"]),
-  deliveryPoint: z.string().trim().min(3, "Punto de entrega requerido").max(100),
-  cover: coverSchema.optional(),
-});
+export const createItemSchema = z
+  .object({
+    title: z.string().trim().min(3, "El título debe tener al menos 3 caracteres").max(120),
+    description: z.string().trim().min(10, "La descripción debe tener al menos 10 caracteres").max(1000),
+    category: z.string().trim().min(2, "Categoría inválida").max(50),
+    condition: z.enum(["Nuevo", "Como nuevo", "Buen estado", "Aceptable"]).optional(),
+    state: z.string().optional(),
+    deliveryPoint: z.string().trim().min(3, "Punto de entrega requerido").max(100).optional(),
+    sex: z.string().optional(),
+    cover: coverSchema.optional(),
+  })
+  .transform((data) => {
+    let cond = data.condition;
+    if (!cond && data.state) {
+      if (data.state === "nuevo" || data.state === "Nuevo") cond = "Nuevo";
+      else if (data.state === "usado_bueno" || data.state === "Buen estado") cond = "Buen estado";
+      else if (data.state === "usado_regular" || data.state === "Aceptable") cond = "Aceptable";
+      else if (data.state === "Como nuevo") cond = "Como nuevo";
+    }
+    return {
+      title: data.title,
+      description: data.description,
+      category: data.category,
+      condition: cond ?? "Buen estado",
+      deliveryPoint: data.deliveryPoint ?? "Campus TdeA - Biblioteca / Cafetería",
+      cover: data.cover,
+    };
+  });
 
 export const reviewItemSchema = z.object({
   action: z.enum(["approve", "reject"]),
