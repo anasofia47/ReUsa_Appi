@@ -44,43 +44,19 @@ export async function notifyUsersWithRoles(
   const firestore = db();
   const now = new Date().toISOString();
 
-  // 1. Notificación con targetRole para que cualquier supervisor/admin la reciba sin depender de un UID específico
-  for (const role of roles) {
-    await firestore.collection(NOTIFICATIONS).add({
-      targetRole: role,
-      title: data.title,
-      message: data.message,
-      type: data.type,
-      targetPath: data.targetPath,
-      read: false,
-      readBy: [],
-      createdAt: now,
-    });
-  }
+  // Una única notificación por targetRole para supervisores/administradores (evita duplicados)
+  const targetRole = roles.includes("supervisor") ? "supervisor" : roles[0];
 
-  // 2. Intentar registrar por UID individual si los usuarios están en la colección users
-  try {
-    const usersSnap = await firestore.collection("users").where("role", "in", roles).get();
-    if (!usersSnap.empty) {
-      const batch = firestore.batch();
-      for (const doc of usersSnap.docs) {
-        const notifRef = firestore.collection(NOTIFICATIONS).doc();
-        batch.set(notifRef, {
-          userId: doc.id,
-          title: data.title,
-          message: data.message,
-          type: data.type,
-          targetPath: data.targetPath,
-          read: false,
-          readBy: [],
-          createdAt: now,
-        });
-      }
-      await batch.commit();
-    }
-  } catch (err) {
-    console.warn("[notifyUsersWithRoles] no se pudo consultar users por rol, pero targetRole quedó guardado:", err);
-  }
+  await firestore.collection(NOTIFICATIONS).add({
+    targetRole,
+    title: data.title,
+    message: data.message,
+    type: data.type,
+    targetPath: data.targetPath,
+    read: false,
+    readBy: [],
+    createdAt: now,
+  });
 }
 
 export async function listUserNotifications(user: AuthUser): Promise<{
@@ -105,6 +81,7 @@ export async function listUserNotifications(user: AuthUser): Promise<{
 
   const snaps = await Promise.all(queries);
   const seenIds = new Set<string>();
+  const seenFingerprints = new Set<string>();
   const notifications: Notification[] = [];
 
   for (const snap of snaps) {
@@ -112,6 +89,12 @@ export async function listUserNotifications(user: AuthUser): Promise<{
       if (seenIds.has(doc.id)) continue;
       seenIds.add(doc.id);
       const data = doc.data();
+
+      // Deduplicar notificaciones con el mismo contenido y ruta (p. ej. si se guardó tanto por targetRole como por UID)
+      const fingerprint = `${data.title}|${data.message}|${data.targetPath}|${(data.createdAt || "").slice(0, 16)}`;
+      if (seenFingerprints.has(fingerprint)) continue;
+      seenFingerprints.add(fingerprint);
+
       const readBy = (data.readBy as string[]) || [];
       const isRead = Boolean(data.read || (user.uid && readBy.includes(user.uid)));
 

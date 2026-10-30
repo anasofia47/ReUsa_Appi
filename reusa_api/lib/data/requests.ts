@@ -158,6 +158,18 @@ export async function transitionRequest(
       throw new ApiError(403, "FORBIDDEN", "Solo el dueño de la publicación o un administrador puede responder a esta solicitud");
     }
 
+    // Firestore requiere que todas las lecturas se ejecuten antes de cualquier escritura
+    let othersDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+    if (action === "deliver") {
+      const othersSnap = await tx.get(
+        firestore
+          .collection(REQUESTS)
+          .where("itemId", "==", current.itemId)
+          .where("status", "in", ["requested", "approved"]),
+      );
+      othersDocs = othersSnap.docs;
+    }
+
     const now = new Date();
     const result = applyRequestAction(current, action, now);
     const nowIso = now.toISOString();
@@ -178,14 +190,7 @@ export async function transitionRequest(
 
     if (action === "deliver") {
       // Rechazar otras peticiones que estaban esperando este mismo objeto
-      const othersSnap = await tx.get(
-        firestore
-          .collection(REQUESTS)
-          .where("itemId", "==", current.itemId)
-          .where("status", "in", ["requested", "approved"]),
-      );
-
-      for (const otherDoc of othersSnap.docs) {
+      for (const otherDoc of othersDocs) {
         if (otherDoc.id !== current.id) {
           tx.update(otherDoc.ref, {
             status: "rejected",

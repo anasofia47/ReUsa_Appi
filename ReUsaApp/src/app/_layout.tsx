@@ -8,6 +8,7 @@ import { useColorScheme } from 'react-native';
 import { migrateDbIfNeeded } from '@/db/migrations';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
 import { DataProvider } from '@/providers/data-provider';
+import { NotificationsProvider } from '@/providers/notifications-provider';
 
 // La pantalla de carga nativa permanece hasta saber si hay una sesión guardada.
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -57,7 +58,9 @@ export default function RootLayout() {
       <SQLiteProvider databaseName="reusa.db" onInit={migrateDbIfNeeded}>
         <AuthProvider>
           <DataProvider>
-            <RootStack />
+            <NotificationsProvider>
+              <RootStack />
+            </NotificationsProvider>
           </DataProvider>
         </AuthProvider>
       </SQLiteProvider>

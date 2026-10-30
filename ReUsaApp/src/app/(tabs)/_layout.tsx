@@ -3,11 +3,13 @@ import { Tabs } from 'expo-router';
 import { useColorScheme } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
+import { useNotifications } from '@/providers/notifications-provider';
 
 export default function TabsLayout() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const { user } = useAuth();
+  const { unreadCount } = useNotifications();
   const isSupervisor = user?.role === 'supervisor' || user?.role === 'admin';
 
   return (
@@ -52,6 +54,13 @@ export default function TabsLayout() {
         name="notifications"
         options={{
           title: 'Notificaciones',
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: '#ef4444',
+            color: '#ffffff',
+            fontSize: 10,
+            fontWeight: 'bold',
+          },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="notifications-outline" size={size} color={color as string} />
           ),

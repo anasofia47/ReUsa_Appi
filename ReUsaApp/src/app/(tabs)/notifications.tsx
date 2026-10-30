@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -13,73 +13,58 @@ import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/providers/auth-provider';
-import { api } from '@/services/api';
+import { useNotifications } from '@/providers/notifications-provider';
 import type { Notification } from '@/types';
 
 export default function NotificationsScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    refresh,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications();
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const res = await api.get<{ notifications: Notification[]; unreadCount: number }>(
-        '/api/notifications',
-      );
-      setNotifications(res.notifications || []);
-      setUnreadCount(res.unreadCount || 0);
-    } catch {
-      // Silenciar errores de conectividad temporal
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  async function onRefresh() {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }
 
-  useEffect(() => {
-    void fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
-
-  async function onPressNotification(item: Notification) {
+  function onPressNotification(item: Notification) {
     if (!item.read) {
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)),
-      );
-      setUnreadCount((c) => Math.max(0, c - 1));
-      api.patch(`/api/notifications/${item.id}/read`, {}).catch(() => {});
+      void markAsRead(item.id);
     }
 
-    // Mapeo de rutas web a rutas móviles de Expo
+    // Redirección inteligente según el tipo de notificación y rol
     const path = item.targetPath;
-    if (path.includes('/requests') || path.includes('/supervisor')) {
-      router.push('/(tabs)/requests');
+    if (path.includes('/supervisor') || item.type === 'item_submitted') {
+      // Supervisor: abre la pestaña de moderación para aprobar o rechazar de inmediato
+      router.navigate({ pathname: '/(tabs)/requests', params: { tab: 'moderation' } });
+    } else if (
+      path.includes('/requests') ||
+      item.type === 'item_requested' ||
+      item.type === 'request_resolved'
+    ) {
+      // Estudiante: va directo a sus solicitudes / entregas
+      router.navigate({ pathname: '/(tabs)/requests', params: { tab: 'requests' } });
     } else if (path.includes('/reports')) {
-      router.push('/(tabs)/profile');
+      // Estudiante: redirige al perfil para ver reportes y motivos de rechazo
+      router.navigate('/(tabs)/profile');
     } else if (path.includes('/items/')) {
       const id = path.split('/items/')[1]?.split('?')[0];
       if (id) {
         router.push({ pathname: '/item/[id]', params: { id } });
       } else {
-        router.push('/(tabs)');
+        router.navigate('/(tabs)');
       }
     } else {
-      router.push('/(tabs)');
-    }
-  }
-
-  async function markAllAsRead() {
-    try {
-      await api.post('/api/notifications', {});
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      setUnreadCount(0);
-    } catch {
-      // Ignorar
+      router.navigate('/(tabs)');
     }
   }
 
@@ -91,7 +76,7 @@ export default function NotificationsScreen() {
             Notificaciones
           </ThemedText>
           {unreadCount > 0 ? (
-            <Pressable onPress={markAllAsRead} style={styles.markReadBtn}>
+            <Pressable onPress={() => void markAllAsRead()} style={styles.markReadBtn}>
               <ThemedText type="smallBold" style={{ color: theme.primary, fontSize: 13 }}>
                 Marcar leídas ({unreadCount})
               </ThemedText>
@@ -113,13 +98,7 @@ export default function NotificationsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.list, { paddingBottom: BottomTabInset + Spacing.four }]}
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                void fetchNotifications();
-              }}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
           }
           ListEmptyComponent={
             <EmptyView
@@ -140,7 +119,7 @@ export default function NotificationsScreen() {
 
             return (
               <Pressable
-                onPress={() => void onPressNotification(item)}
+                onPress={() => onPressNotification(item)}
                 style={({ pressed }) => [
                   styles.card,
                   {

@@ -11,6 +11,7 @@ import {
 import { ConnectionBanner } from '@/components/connection-banner';
 import { ItemCard } from '@/components/item-views';
 import { Screen } from '@/components/screen';
+import { SelectField } from '@/components/select-field';
 import { EmptyView, ErrorView, LoadingView } from '@/components/state-views';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Spacing } from '@/constants/theme';
@@ -90,36 +91,18 @@ export default function CatalogScreen() {
           })}
         </View>
 
-        {/* Categorías */}
+        {/* Menú desplegable de Categorías */}
         {categories.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chips}>
-            {[null, ...categories].map((c) => {
-              const selected = c === category;
-              return (
-                <Pressable
-                  key={c ?? 'all'}
-                  onPress={() => setCategory(c)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  style={[
-                    styles.chip,
-                    {
-                      borderColor: selected ? theme.primary : theme.border,
-                      backgroundColor: selected ? theme.primary : 'transparent',
-                    },
-                  ]}>
-                  <ThemedText
-                    type="smallBold"
-                    style={{ color: selected ? theme.onPrimary : theme.text }}>
-                    {c ?? 'Todas las categorías'}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+          <SelectField
+            label="Categoría"
+            value={category ?? ''}
+            options={[
+              { value: '', label: 'Todas las categorías', description: 'Ver todos los artículos' },
+              ...categories.map((c) => ({ value: c, label: c })),
+            ]}
+            onChange={(val) => setCategory(val ? val : null)}
+            placeholder="Todas las categorías"
+          />
         ) : null}
       </View>
 

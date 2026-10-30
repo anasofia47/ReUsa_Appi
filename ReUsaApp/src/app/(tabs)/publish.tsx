@@ -5,13 +5,13 @@ import {
   KeyboardAvoidingView,
   Linking,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
 import { Button } from '@/components/button';
 import { Screen } from '@/components/screen';
+import { SelectField, type SelectOption } from '@/components/select-field';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Spacing } from '@/constants/theme';
@@ -28,15 +28,46 @@ import {
 } from '@/services/device/cover-service';
 import type { Item, Sex } from '@/types';
 
+const CATEGORY_OPTIONS: SelectOption[] = [
+  { value: 'Libros y Guías', label: 'Libros y Guías', description: 'Textos de estudio, lecturas, apuntes' },
+  { value: 'Tecnología y Calculadoras', label: 'Tecnología y Calculadoras', description: 'Calculadoras científicas, tablets, accesorios' },
+  { value: 'Papelería y Dibujo', label: 'Papelería y Dibujo', description: 'Reglas, compases, cuadernos, colores' },
+  { value: 'Ropa y Uniformes', label: 'Ropa y Uniformes', description: 'Batas de laboratorio, ropa deportiva TdeA' },
+  { value: 'Mobiliario y Accesorios', label: 'Mobiliario y Accesorios', description: 'Maletines, morrales, estuches' },
+  { value: 'Otros', label: 'Otros', description: 'Cualquier otro material universitario' },
+];
+
+const CONDITION_OPTIONS: SelectOption[] = [
+  { value: 'Nuevo', label: 'Nuevo', description: 'Sin estrenar o en empaque original' },
+  { value: 'Como nuevo', label: 'Como nuevo', description: 'Poco uso, impecable estado' },
+  { value: 'Buen estado', label: 'Buen estado', description: 'Funcional con desgaste mínimo normal' },
+  { value: 'Aceptable', label: 'Aceptable', description: 'Totalmente funcional' },
+];
+
+const DELIVERY_OPTIONS: SelectOption[] = [
+  { value: 'Campus TdeA - Bloque 1 Cafetería', label: 'Bloque 1 - Cafetería central' },
+  { value: 'Campus TdeA - Bloque 2 Biblioteca', label: 'Bloque 2 - Biblioteca' },
+  { value: 'Campus TdeA - Bloque 3 Plazoleta', label: 'Bloque 3 - Plazoleta' },
+  { value: 'Campus TdeA - Bloque 4 Aulas', label: 'Bloque 4 - Aulas' },
+  { value: 'Campus TdeA - Bloque 5 Administrativo', label: 'Bloque 5 - Administrativo' },
+  { value: 'Portería Principal Calle 78B', label: 'Portería Principal - Calle 78B' },
+];
+
+const SEX_OPTIONS: SelectOption<Sex>[] = [
+  { value: 'otro', label: 'Unisex / Cualquier persona', description: 'Sin distinción de género' },
+  { value: 'femenino', label: 'Femenino', description: 'Para estudiantes mujeres' },
+  { value: 'masculino', label: 'Masculino', description: 'Para estudiantes hombres' },
+];
+
 export default function PublishScreen() {
   const theme = useTheme();
   const { repos, online, syncNow } = useData();
 
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('Académico');
+  const [category, setCategory] = useState('Libros y Guías');
   const [description, setDescription] = useState('');
   const [deliveryPoint, setDeliveryPoint] = useState('Campus TdeA - Bloque 1 Cafetería');
-  const [state, setState] = useState<'nuevo' | 'usado_bueno' | 'usado_regular'>('usado_bueno');
+  const [condition, setCondition] = useState('Buen estado');
   const [sex, setSex] = useState<Sex>('otro');
   const [cover, setCover] = useState<PickedCover | null>(null);
 
@@ -84,8 +115,14 @@ export default function PublishScreen() {
     setLoading(true);
     setFeedback(null);
     try {
-      const condition =
-        state === 'nuevo' ? 'Nuevo' : state === 'usado_bueno' ? 'Buen estado' : 'Aceptable';
+      const stateMap: Record<string, 'nuevo' | 'usado_bueno' | 'usado_regular'> = {
+        Nuevo: 'nuevo',
+        'Como nuevo': 'usado_bueno',
+        'Buen estado': 'usado_bueno',
+        Aceptable: 'usado_regular',
+      };
+      const state = stateMap[condition] || 'usado_bueno';
+
       const { item } = await api.post<{ item: Item }>('/api/items', {
         title: title.trim(),
         category: category.trim(),
@@ -147,86 +184,37 @@ export default function PublishScreen() {
             placeholder="Ej. Calculadora científica, Bata de laboratorio..."
           />
 
-          <TextField
+          <SelectField
             label="Categoría"
             value={category}
-            onChangeText={setCategory}
-            placeholder="Ej. Académico, Tecnología, Ropa, Libros..."
+            options={CATEGORY_OPTIONS}
+            onChange={setCategory}
+            placeholder="Selecciona una categoría..."
           />
 
-          <TextField
-            label="Punto de entrega en el campus"
+          <SelectField
+            label="Estado del objeto"
+            value={condition}
+            options={CONDITION_OPTIONS}
+            onChange={setCondition}
+            placeholder="Selecciona el estado..."
+          />
+
+          <SelectField
+            label="Punto de entrega en el campus TdeA"
             value={deliveryPoint}
-            onChangeText={setDeliveryPoint}
-            placeholder="Ej. Bloque 1 - Cafetería, Biblioteca Bloque 2..."
+            options={DELIVERY_OPTIONS}
+            onChange={setDeliveryPoint}
+            placeholder="Selecciona punto de entrega..."
           />
 
-          {/* Estado del objeto */}
-          <View style={styles.section}>
-            <ThemedText type="smallBold">Estado físico</ThemedText>
-            <View style={styles.chipsRow}>
-              {(['nuevo', 'usado_bueno', 'usado_regular'] as const).map((s) => {
-                const selected = state === s;
-                return (
-                  <Pressable
-                    key={s}
-                    onPress={() => setState(s)}
-                    style={[
-                      styles.chip,
-                      {
-                        borderColor: selected ? theme.primary : theme.border,
-                        backgroundColor: selected ? theme.primary : 'transparent',
-                      },
-                    ]}>
-                    <ThemedText
-                      type="smallBold"
-                      style={{
-                        color: selected ? theme.onPrimary : theme.text,
-                        fontSize: 12,
-                      }}>
-                      {s === 'usado_bueno'
-                        ? 'Usado (Bueno)'
-                        : s === 'usado_regular'
-                          ? 'Usado (Aceptable)'
-                          : 'Nuevo'}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Destinado a Sexo */}
-          <View style={styles.section}>
-            <ThemedText type="smallBold">Destinado para sexo</ThemedText>
-            <View style={styles.chipsRow}>
-              {(['masculino', 'femenino', 'otro'] as const).map((s) => {
-                const selected = sex === s;
-                return (
-                  <Pressable
-                    key={s}
-                    onPress={() => setSex(s)}
-                    style={[
-                      styles.chip,
-                      {
-                        borderColor: selected ? theme.primary : theme.border,
-                        backgroundColor: selected ? theme.primary : 'transparent',
-                      },
-                    ]}>
-                    <ThemedText
-                      type="smallBold"
-                      style={{
-                        color: selected ? theme.onPrimary : theme.text,
-                        fontSize: 12,
-                        textTransform: 'capitalize',
-                      }}>
-                      {s}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
+          <SelectField<Sex>
+            label="Destinado para sexo"
+            value={sex}
+            options={SEX_OPTIONS}
+            onChange={setSex}
+            placeholder="Selecciona público..."
+          />
 
           {/* Cámara / Foto */}
           <View style={styles.section}>
@@ -265,7 +253,11 @@ export default function PublishScreen() {
             numberOfLines={3}
           />
 
-          <Button title="Enviar para aprobación" onPress={submit} loading={loading} />
+          <Button
+            title="Enviar para aprobación del supervisor"
+            onPress={submit}
+            loading={loading}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
@@ -276,13 +268,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   form: { gap: Spacing.three, paddingVertical: Spacing.two },
   section: { gap: Spacing.one },
-  chipsRow: { flexDirection: 'row', gap: Spacing.two, flexWrap: 'wrap' },
-  chip: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
   photoButtons: { gap: Spacing.two },
   imagePreview: { alignItems: 'center', gap: Spacing.two },
   preview: { width: 140, height: 140, borderRadius: 12 },

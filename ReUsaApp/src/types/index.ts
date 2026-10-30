@@ -37,6 +37,8 @@ export interface Item {
   publishedBy: string;
   publisherId?: string;
   publisherName?: string;
+  publisherEmail?: string;
+  deliveryPoint?: string;
   status: ItemStatus;
   reviewedBy?: string | null;
   reviewedAt?: string | null;
