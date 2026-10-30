@@ -39,8 +39,8 @@ export default function SignUpScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const emailRef = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
+  const emailRef = useRef<any>(null);
+  const passwordRef = useRef<any>(null);
 
   async function submit() {
     const found = validateCredentials({ name, email, password, sex }, 'signUp');

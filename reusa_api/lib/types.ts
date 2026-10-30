@@ -73,12 +73,14 @@ export type ReviewAction = "approve" | "reject";
 
 export interface Notification {
   id: string;
-  userId: string;
+  userId?: string;
+  targetRole?: Role;
   title: string;
   message: string;
   type: "item_submitted" | "item_reviewed" | "item_requested" | "request_resolved";
   targetPath: string;
   read: boolean;
+  readBy?: string[];
   createdAt: string;
 }
 

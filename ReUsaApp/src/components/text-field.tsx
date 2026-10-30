@@ -9,7 +9,7 @@ interface TextFieldProps extends TextInputProps {
   error?: string;
 }
 
-export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
+export const TextField = forwardRef<any, TextFieldProps>(function TextField(
   { label, error, style, ...rest },
   ref,
 ) {

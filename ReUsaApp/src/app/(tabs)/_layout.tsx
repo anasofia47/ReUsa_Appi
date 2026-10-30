@@ -26,7 +26,7 @@ export default function TabsLayout() {
         options={{
           title: 'Catálogo',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size} color={color} />
+            <Ionicons name="grid-outline" size={size} color={color as string} />
           ),
         }}
       />
@@ -35,7 +35,7 @@ export default function TabsLayout() {
         options={{
           title: isSupervisor ? 'Gestión' : 'Solicitudes',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="swap-horizontal-outline" size={size} color={color} />
+            <Ionicons name="swap-horizontal-outline" size={size} color={color as string} />
           ),
         }}
       />
@@ -44,7 +44,7 @@ export default function TabsLayout() {
         options={{
           title: 'Donar',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle-outline" size={size} color={color} />
+            <Ionicons name="add-circle-outline" size={size} color={color as string} />
           ),
         }}
       />
@@ -53,7 +53,7 @@ export default function TabsLayout() {
         options={{
           title: 'Notificaciones',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="notifications-outline" size={size} color={color} />
+            <Ionicons name="notifications-outline" size={size} color={color as string} />
           ),
         }}
       />
@@ -62,7 +62,7 @@ export default function TabsLayout() {
         options={{
           title: 'Perfil',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+            <Ionicons name="person-outline" size={size} color={color as string} />
           ),
         }}
       />

@@ -14,7 +14,7 @@ export function NotificationBell() {
 
   async function fetchNotifications() {
     try {
-      const res = await fetch("/api/notifications");
+      const res = await fetch("/api/notifications", { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications || []);
@@ -48,7 +48,10 @@ export function NotificationBell() {
         prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)),
       );
       setUnreadCount((c) => Math.max(0, c - 1));
-      fetch(`/api/notifications/${notification.id}/read`, { method: "PATCH" }).catch(() => {});
+      fetch(`/api/notifications/${notification.id}/read`, {
+        method: "PATCH",
+        credentials: "include",
+      }).catch(() => {});
     }
     setOpen(false);
     if (notification.targetPath) {
@@ -59,7 +62,7 @@ export function NotificationBell() {
   async function markAllAsRead() {
     setLoading(true);
     try {
-      await fetch("/api/notifications", { method: "POST" });
+      await fetch("/api/notifications", { method: "POST", credentials: "include" });
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     } finally {

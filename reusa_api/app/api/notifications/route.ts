@@ -4,12 +4,12 @@ import { route } from "@/lib/http";
 
 export const GET = route(async (request) => {
   const user = await requireUser(request);
-  const { notifications, unreadCount } = await listUserNotifications(user.uid);
+  const { notifications, unreadCount } = await listUserNotifications(user);
   return Response.json({ notifications, unreadCount });
 });
 
 export const POST = route(async (request) => {
   const user = await requireUser(request);
-  await markAllNotificationsRead(user.uid);
+  await markAllNotificationsRead(user);
   return Response.json({ ok: true });
 });
