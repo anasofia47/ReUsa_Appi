@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { logoutAction } from "@/app/actions";
 import { getWebUser } from "@/lib/web/session";
+import { NotificationBell } from "./notification-bell";
 import { secondaryButtonClass } from "./ui";
 
 export async function Header() {
@@ -43,11 +44,11 @@ export async function Header() {
               </Link>
             )}
 
-            {user.role === "admin" && (
-              <Link href="/reports" className="text-indigo-700 hover:underline dark:text-indigo-400 font-semibold">
-                Reportes
-              </Link>
-            )}
+            <Link href="/reports" className="text-indigo-700 hover:underline dark:text-indigo-400 font-semibold">
+              {user.role === "student" ? "Mis Reportes" : "Reportes"}
+            </Link>
+
+            <NotificationBell />
 
             <span className="hidden text-zinc-500 sm:inline text-xs bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 rounded-md">
               {user.name} · <strong className="text-zinc-700 dark:text-zinc-300">{roleLabel}</strong>

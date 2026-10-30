@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { ApiError } from "../errors";
 import { applyReviewAction } from "../domain/reusa-rules";
 import type { AuthUser, Item, ItemStatus, ReviewAction } from "../types";
+import { createNotification, notifyUsersWithRoles } from "./notifications";
 
 export const ITEMS = "items";
 export const ITEM_COVERS = "itemCovers";
@@ -14,6 +15,10 @@ export function toItem(id: string, data: ItemDoc): Item {
   return {
     id,
     ...rest,
+    state: rest.condition,
+    publishedBy: rest.publisherId,
+    sex: rest.publisherGender,
+    reviewComment: rest.rejectionReason,
     coverUrl: coverVersion > 0 ? `/api/items/${id}/cover?v=${coverVersion}` : null,
   };
 }
@@ -24,6 +29,7 @@ export interface ItemFilter {
   status?: ItemStatus;
   updatedSince?: string;
   publisherId?: string;
+  onlyAvailable?: boolean;
 }
 
 const normalize = (s: string) =>
@@ -53,9 +59,16 @@ export async function listItems(user?: AuthUser, filter: ItemFilter = {}): Promi
       throw new ApiError(403, "FORBIDDEN", "Solo supervisores o administradores pueden filtrar por estados pendientes o rechazados");
     }
     items = items.filter((i) => i.status === filter.status);
+    if (!isPrivileged) {
+      items = items.filter((i) => i.available !== false);
+    }
   } else if (!isPrivileged) {
-    // Para usuarios regulares o app móvil: solo objetos aprobados
-    items = items.filter((i) => i.status === "approved");
+    // Para usuarios regulares o app móvil: solo objetos aprobados y disponibles
+    items = items.filter((i) => i.status === "approved" && i.available !== false);
+  }
+
+  if (filter.onlyAvailable) {
+    items = items.filter((i) => i.available !== false);
   }
 
   if (filter.category) {
@@ -135,6 +148,15 @@ export async function createItem(
   };
 
   await itemRef.set(itemDoc);
+
+  // Notificar a supervisores y administradores sobre la nueva publicación para moderar
+  notifyUsersWithRoles(["supervisor", "admin"], {
+    title: "Nuevo objeto para moderar",
+    message: `${user.name} publicó "${data.title}" pendiente de aprobación.`,
+    targetPath: "/supervisor",
+    type: "item_submitted",
+  }).catch((err) => console.error("Error enviando notificaciones:", err));
+
   return toItem(slug, itemDoc);
 }
 
@@ -147,7 +169,7 @@ export async function reviewItem(
   const firestore = db();
   const itemRef = firestore.collection(ITEMS).doc(itemId);
 
-  return firestore.runTransaction(async (tx) => {
+  const updatedItem = await firestore.runTransaction(async (tx) => {
     const snap = await tx.get(itemRef);
     if (!snap.exists) throw new ApiError(404, "NOT_FOUND", "Objeto no encontrado");
     const current = snap.data() as ItemDoc;
@@ -165,6 +187,27 @@ export async function reviewItem(
 
     return toItem(itemId, { ...current, ...result, updatedAt: now });
   });
+
+  // Notificar al estudiante que publicó el objeto
+  if (action === "approve") {
+    createNotification({
+      userId: updatedItem.publisherId,
+      title: "¡Objeto aprobado!",
+      message: `Tu objeto "${updatedItem.title}" fue aprobado por ${supervisor.name} y ya está disponible en el catálogo.`,
+      targetPath: `/items/${itemId}`,
+      type: "item_reviewed",
+    }).catch((err) => console.error("Error enviando notificación:", err));
+  } else {
+    createNotification({
+      userId: updatedItem.publisherId,
+      title: "Objeto no aprobado por moderación",
+      message: `Tu objeto "${updatedItem.title}" fue rechazado por ${supervisor.name}. Motivo: ${reason ?? "No cumple con las normas de publicación de ReUsa."}`,
+      targetPath: "/reports",
+      type: "item_reviewed",
+    }).catch((err) => console.error("Error enviando notificación:", err));
+  }
+
+  return updatedItem;
 }
 
 export async function saveItemCover(

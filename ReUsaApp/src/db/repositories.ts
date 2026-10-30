@@ -39,15 +39,19 @@ const toItem = (r: ItemRow): Item => ({
   title: r.title,
   category: r.category,
   description: r.description,
-  state: r.state,
+  state: r.state || 'usado_bueno',
+  condition: r.state || 'usado_bueno',
   sex: r.sex ?? undefined,
+  publisherGender: r.sex ?? undefined,
   available: r.available === 1,
   publishedBy: r.published_by,
+  publisherId: r.published_by,
   publisherName: r.publisher_name ?? undefined,
   status: r.status,
   reviewedBy: r.reviewed_by,
   reviewedAt: r.reviewed_at,
   reviewComment: r.review_comment,
+  rejectionReason: r.review_comment,
   coverUrl: r.cover_url,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
@@ -65,6 +69,12 @@ export function createItemsRepo(db: SQLiteDatabase) {
       if (items.length === 0) return;
       await db.withTransactionAsync(async () => {
         for (const item of items) {
+          const state = (item as any).state || (item as any).condition || 'usado_bueno';
+          const publishedBy = (item as any).publishedBy || (item as any).publisherId || '';
+          const sex = (item as any).sex || (item as any).publisherGender || null;
+          const status = (item as any).status === 'pending_approval' ? 'pending' : ((item as any).status || 'approved');
+          const reviewComment = (item as any).reviewComment || (item as any).rejectionReason || null;
+
           await db.runAsync(
             `INSERT INTO items (id, title, category, description, state, sex, available,
               published_by, publisher_name, status, reviewed_by, reviewed_at, review_comment,
@@ -82,15 +92,15 @@ export function createItemsRepo(db: SQLiteDatabase) {
             item.title,
             item.category,
             item.description,
-            item.state,
-            item.sex ?? null,
+            state,
+            sex,
             item.available ? 1 : 0,
-            item.publishedBy,
+            publishedBy,
             item.publisherName ?? null,
-            item.status,
+            status,
             item.reviewedBy ?? null,
             item.reviewedAt ?? null,
-            item.reviewComment ?? null,
+            reviewComment,
             item.coverUrl,
             item.createdAt,
             item.updatedAt,
@@ -107,6 +117,8 @@ export function createItemsRepo(db: SQLiteDatabase) {
          WHERE (? = '' OR search_text LIKE ? ESCAPE '\\')
            AND (? IS NULL OR category = ?)
            AND (? IS NULL OR sex = ?)
+           AND available = 1
+           AND status = 'approved'
          ORDER BY updated_at DESC`,
         term,
         `%${escapeLike(term)}%`,
@@ -260,8 +272,11 @@ const toRequest = (r: RequestRow): LocalRequest => ({
   itemTitle: r.item_title,
   publisherId: r.publisher_id,
   userId: r.user_id,
+  applicantId: r.user_id,
   userEmail: r.user_email,
+  applicantEmail: r.user_email,
   userName: r.user_name,
+  applicantName: r.user_name,
   status: r.status,
   clientRequestId: r.client_request_id,
   requestedAt: r.requested_at,
@@ -274,6 +289,10 @@ const toRequest = (r: RequestRow): LocalRequest => ({
 
 export function createRequestsRepo(db: SQLiteDatabase) {
   async function insert(req: ProductRequest, syncState: SyncState, syncError: string | null) {
+    const userId = req.userId || (req as any).applicantId || '';
+    const userEmail = req.userEmail || (req as any).applicantEmail || '';
+    const userName = req.userName || (req as any).applicantName || '';
+
     await db.runAsync(
       `INSERT OR REPLACE INTO requests (id, item_id, item_title, publisher_id, user_id, user_email,
         user_name, status, client_request_id, requested_at, resolved_at, delivered_at, updated_at,
@@ -283,9 +302,9 @@ export function createRequestsRepo(db: SQLiteDatabase) {
       req.itemId,
       req.itemTitle,
       req.publisherId,
-      req.userId,
-      req.userEmail,
-      req.userName,
+      userId,
+      userEmail,
+      userName,
       req.status,
       req.clientRequestId,
       req.requestedAt,

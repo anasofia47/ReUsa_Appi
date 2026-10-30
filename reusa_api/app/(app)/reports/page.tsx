@@ -2,11 +2,216 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { HighchartsDashboard } from "@/components/highcharts-dashboard";
 import { buttonClass, inputClass } from "@/components/ui";
-import { getReportsSummary } from "@/lib/data/reports";
-import type { Gender } from "@/lib/types";
+import { getReportsSummary, getStudentReport } from "@/lib/data/reports";
+import type { Gender, StudentReport } from "@/lib/types";
 import { requireWebUser } from "@/lib/web/session";
 
-export const metadata: Metadata = { title: "Reportes de ReUsa · Administrador" };
+export const metadata: Metadata = { title: "Reportes de ReUsa" };
+
+function StudentReportView({ report }: { report: StudentReport }) {
+  return (
+    <div className="flex flex-col gap-8">
+      {/* Métricas del Estudiante */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <span className="text-xs text-zinc-500 block">Objetos Publicados</span>
+          <strong className="text-2xl font-extrabold text-zinc-800 dark:text-zinc-100">
+            {report.publishedItems.total}
+          </strong>
+        </div>
+
+        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <span className="text-xs text-zinc-500 block">Aprobados por Moderación</span>
+          <strong className="text-2xl font-extrabold text-emerald-600">
+            {report.publishedItems.approved}
+          </strong>
+        </div>
+
+        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <span className="text-xs text-zinc-500 block">Objetos Rechazados</span>
+          <strong className="text-2xl font-extrabold text-rose-600">
+            {report.publishedItems.rejected}
+          </strong>
+        </div>
+
+        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <span className="text-xs text-zinc-500 block">Donaciones Aprobadas a Otros</span>
+          <strong className="text-2xl font-extrabold text-blue-600">
+            {report.donationsGiven.approvedCount}
+          </strong>
+        </div>
+      </div>
+
+      {/* 1. Mis Objetos Puestos a Donar */}
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+          <span>📦</span> Mis Objetos Puestos a Donar (Aprobados, Pendientes y Rechazados)
+        </h2>
+        {report.publishedItems.items.length === 0 ? (
+          <p className="text-sm text-zinc-500">Aún no has publicado objetos para donar.</p>
+        ) : (
+          <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {report.publishedItems.items.map((item) => (
+              <div key={item.id} className="py-4 flex flex-col gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="font-semibold text-base text-zinc-900 dark:text-zinc-100">
+                      {item.title}
+                    </h3>
+                    <span className="text-xs text-zinc-500">Categoría: {item.category}</span>
+                  </div>
+                  <div>
+                    {item.status === "approved" ? (
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                        {item.available ? "✓ Aprobado en catálogo" : "✓ Donado / Confirmado"}
+                      </span>
+                    ) : item.status === "pending_approval" ? (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                        ⏳ En revisión de moderación
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+                        ✕ Rechazado por supervisor
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {item.status === "rejected" && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-4 text-xs text-rose-900 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200 mt-2">
+                    <p className="font-bold flex items-center gap-1.5 text-sm">
+                      <span>⚠️</span> Detalle del Rechazo por Moderación
+                    </p>
+                    <div className="mt-2 space-y-1">
+                      <p>
+                        <strong>Revisado por:</strong> {item.reviewedByName ?? "Supervisor ReUsa"}{" "}
+                        {item.reviewedByEmail ? `(${item.reviewedByEmail})` : ""}
+                      </p>
+                      {item.reviewedAt && (
+                        <p>
+                          <strong>Fecha de revisión:</strong>{" "}
+                          {new Date(item.reviewedAt).toLocaleString("es-CO")}
+                        </p>
+                      )}
+                      <p>
+                        <strong>Motivo de rechazo:</strong>{" "}
+                        <span className="italic">{item.rejectionReason ?? "No especificado"}</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 2. Donaciones Aprobadas a Compañeros */}
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+          <span>🤝</span> Compañeros a quienes les aprobé donar ({report.donationsGiven.recipients.length})
+        </h2>
+        {report.donationsGiven.recipients.length === 0 ? (
+          <p className="text-sm text-zinc-500">
+            Aún no has aprobado solicitudes de donación para tus objetos.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 uppercase">
+                <tr>
+                  <th className="pb-3">Objeto</th>
+                  <th className="pb-3">Estudiante Beneficiario</th>
+                  <th className="pb-3">Contacto</th>
+                  <th className="pb-3 text-center">Estado</th>
+                  <th className="pb-3 text-right">Fecha Aprobación</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {report.donationsGiven.recipients.map((r) => (
+                  <tr key={r.requestId}>
+                    <td className="py-3 font-semibold">{r.itemTitle}</td>
+                    <td className="py-3">{r.applicantName}</td>
+                    <td className="py-3 text-xs text-zinc-500">
+                      <div>{r.applicantEmail}</div>
+                      {r.applicantPhone ? <div>Tel: {r.applicantPhone}</div> : null}
+                    </td>
+                    <td className="py-3 text-center">
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                        {r.status === "delivered" ? "Entregado" : "Aprobado para donar"}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right text-xs text-zinc-500">
+                      {r.resolvedAt
+                        ? new Date(r.resolvedAt).toLocaleDateString("es-CO")
+                        : new Date(r.requestedAt).toLocaleDateString("es-CO")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Mis Solicitudes de Objetos Realizadas */}
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+          <span>🙋</span> Solicitudes que he realizado a otros compañeros ({report.requestsMade.total})
+        </h2>
+        {report.requestsMade.items.length === 0 ? (
+          <p className="text-sm text-zinc-500">No has solicitado ningún objeto aún.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 uppercase">
+                <tr>
+                  <th className="pb-3">Objeto Solicitado</th>
+                  <th className="pb-3">Publicador / Donante</th>
+                  <th className="pb-3 text-center">Estado</th>
+                  <th className="pb-3 text-right">Fecha Solicitud</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {report.requestsMade.items.map((r) => (
+                  <tr key={r.requestId}>
+                    <td className="py-3 font-semibold">{r.itemTitle}</td>
+                    <td className="py-3">
+                      <div>{r.publisherName}</div>
+                      <div className="text-xs text-zinc-500">{r.publisherEmail}</div>
+                    </td>
+                    <td className="py-3 text-center">
+                      {r.status === "approved" ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                          ✓ Aprobada por {r.publisherName}
+                        </span>
+                      ) : r.status === "rejected" ? (
+                        <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+                          ✕ Rechazada por {r.publisherName}
+                        </span>
+                      ) : r.status === "delivered" ? (
+                        <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">
+                          🎉 Entregada
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                          ⏳ Pendiente de respuesta
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 text-right text-xs text-zinc-500">
+                      {new Date(r.requestedAt).toLocaleDateString("es-CO")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 async function ReportsContent({
   searchParams,
@@ -19,9 +224,16 @@ async function ReportsContent({
     gender?: string;
   }>;
 }) {
-  await requireWebUser(["admin", "supervisor"]);
+  const user = await requireWebUser(["student", "supervisor", "admin"]);
   const params = await searchParams;
 
+  // Si el usuario es un estudiante, se muestra su propio reporte detallado
+  if (user.role === "student") {
+    const studentReport = await getStudentReport(user.uid);
+    return <StudentReportView report={studentReport} />;
+  }
+
+  // Vista para Administradores y Supervisores
   const summary = await getReportsSummary({
     startDate: params.startDate,
     endDate: params.endDate,
@@ -240,7 +452,7 @@ export default function ReportsPage(props: {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Reportes de Actividad · ReUsa</h1>
         <p className="text-sm text-zinc-500">
-          Métricas de impacto universitario: objetos publicados por usuario, categorías, sexo y rango de fechas.
+          Métricas de impacto universitario: seguimiento a objetos donados, aprobaciones y solicitudes comunitarias.
         </p>
       </div>
 

@@ -4,11 +4,18 @@ import { ApiError } from "../errors";
 import { applyRequestAction, assertCanRequestItem } from "../domain/reusa-rules";
 import type { AuthUser, ItemRequest, RequestAction, RequestStatus } from "../types";
 import { ITEMS, toItem } from "./items";
+import { createNotification } from "./notifications";
 
 export const REQUESTS = "requests";
 
 function toRequest(id: string, data: Omit<ItemRequest, "id">): ItemRequest {
-  return { id, ...data };
+  return {
+    id,
+    ...data,
+    userId: data.applicantId,
+    userEmail: data.applicantEmail,
+    userName: data.applicantName,
+  };
 }
 
 export async function createRequest(
@@ -23,7 +30,7 @@ export async function createRequest(
   const requestRef = firestore.collection(REQUESTS).doc(requestId);
   const itemRef = firestore.collection(ITEMS).doc(itemId);
 
-  return firestore.runTransaction(async (tx) => {
+  const out = await firestore.runTransaction(async (tx) => {
     // 1. Idempotencia: si ya existe por clientRequestId, se devuelve la existente
     const existing = await tx.get(requestRef);
     if (existing.exists) {
@@ -69,6 +76,19 @@ export async function createRequest(
     tx.set(requestRef, data);
     return { request: toRequest(requestId, data), created: true };
   });
+
+  if (out.created) {
+    // Notificar al donante que recibió una solicitud
+    createNotification({
+      userId: out.request.publisherId,
+      title: "Nueva solicitud de donación",
+      message: `${applicant.name} solicitó tu objeto "${out.request.itemTitle}".`,
+      targetPath: "/requests",
+      type: "item_requested",
+    }).catch((err) => console.error("Error enviando notificación:", err));
+  }
+
+  return out;
 }
 
 export async function listRequests(
@@ -127,7 +147,7 @@ export async function transitionRequest(
   const firestore = db();
   const requestRef = firestore.collection(REQUESTS).doc(id);
 
-  return firestore.runTransaction(async (tx) => {
+  const out = await firestore.runTransaction(async (tx) => {
     const snap = await tx.get(requestRef);
     if (!snap.exists) throw new ApiError(404, "NOT_FOUND", "Solicitud no encontrada");
     const current = toRequest(snap.id, snap.data() as Omit<ItemRequest, "id">);
@@ -147,14 +167,16 @@ export async function transitionRequest(
       updatedAt: nowIso,
     });
 
-    // Si se entrega, marcamos el objeto como no disponible y rechazamos las otras solicitudes pendientes
-    if (action === "deliver") {
+    // Si se aprueba la donación o se entrega, marcamos el objeto como no disponible (oculto del catálogo)
+    if (action === "approve" || action === "deliver") {
       const itemRef = firestore.collection(ITEMS).doc(current.itemId);
       tx.update(itemRef, {
         available: false,
         updatedAt: nowIso,
       });
+    }
 
+    if (action === "deliver") {
       // Rechazar otras peticiones que estaban esperando este mismo objeto
       const othersSnap = await tx.get(
         firestore
@@ -176,4 +198,33 @@ export async function transitionRequest(
 
     return { ...current, ...result, updatedAt: nowIso };
   });
+
+  // Notificar al solicitante según la acción realizada
+  if (action === "approve") {
+    createNotification({
+      userId: out.applicantId,
+      title: "¡Tu solicitud fue aprobada!",
+      message: `${user.name} aprobó tu solicitud para "${out.itemTitle}". Ya puedes coordinar la entrega.`,
+      targetPath: "/requests",
+      type: "request_resolved",
+    }).catch((err) => console.error("Error enviando notificación:", err));
+  } else if (action === "reject") {
+    createNotification({
+      userId: out.applicantId,
+      title: "Solicitud de donación no aceptada",
+      message: `${user.name} no pudo aceptar tu solicitud para "${out.itemTitle}".`,
+      targetPath: "/requests",
+      type: "request_resolved",
+    }).catch((err) => console.error("Error enviando notificación:", err));
+  } else if (action === "deliver") {
+    createNotification({
+      userId: out.applicantId,
+      title: "Donación entregada con éxito",
+      message: `${user.name} confirmó la entrega de "${out.itemTitle}". ¡Gracias por reutilizar!`,
+      targetPath: "/requests",
+      type: "request_resolved",
+    }).catch((err) => console.error("Error enviando notificación:", err));
+  }
+
+  return out;
 }

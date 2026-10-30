@@ -2,11 +2,13 @@ import "server-only";
 import { db } from "../firebase";
 import type {
   Gender,
+  ItemRequest,
   ReportItemByCategory,
   ReportItemByGender,
   ReportItemByUser,
   ReportPublicationRequests,
   ReportSummary,
+  StudentReport,
 } from "../types";
 import { ITEMS, toItem } from "./items";
 import { REQUESTS } from "./requests";
@@ -190,5 +192,125 @@ export async function getReportsSummary(filter: ReportFilter = {}): Promise<Repo
     byCategory: Array.from(categoryMap.values()).sort((a, b) => b.totalItems - a.totalItems),
     byGender: Object.values(genderMap),
     publicationRequests,
+  };
+}
+
+export async function getStudentReport(userId: string): Promise<StudentReport> {
+  const firestore = db();
+  const [itemsSnap, receivedRequestsSnap, sentRequestsSnap, usersSnap] = await Promise.all([
+    firestore.collection(ITEMS).where("publisherId", "==", userId).get(),
+    firestore.collection(REQUESTS).where("publisherId", "==", userId).get(),
+    firestore.collection(REQUESTS).where("applicantId", "==", userId).get(),
+    firestore.collection("users").get(),
+  ]);
+
+  // Mapa de usuarios para resolver nombres de supervisores/moderadores
+  const usersMap = new Map<string, { name: string; email: string; role: string }>();
+  for (const doc of usersSnap.docs) {
+    const data = doc.data();
+    usersMap.set(doc.id, {
+      name: data.name ?? "Usuario ReUsa",
+      email: data.email ?? "",
+      role: data.role ?? "student",
+    });
+  }
+
+  // 1. Objetos publicados por el estudiante
+  const myItems = itemsSnap.docs
+    .map((d) => toItem(d.id, d.data() as never))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  const totalPub = myItems.length;
+  const approvedPub = myItems.filter((i) => i.status === "approved").length;
+  const pendingPub = myItems.filter((i) => i.status === "pending_approval").length;
+  const rejectedPub = myItems.filter((i) => i.status === "rejected").length;
+
+  const publishedItemsList = myItems.map((i) => {
+    const reviewer = i.reviewedBy ? usersMap.get(i.reviewedBy) : null;
+    return {
+      id: i.id,
+      title: i.title,
+      category: i.category,
+      status: i.status,
+      rejectionReason: i.rejectionReason ?? null,
+      reviewedBy: i.reviewedBy ?? null,
+      reviewedByName: reviewer?.name ?? (i.reviewedBy ? "Supervisor de Moderación" : null),
+      reviewedByEmail: reviewer?.email ?? null,
+      reviewedAt: i.reviewedAt ?? null,
+      available: i.available,
+      createdAt: i.createdAt,
+    };
+  });
+
+  // 2. Solicitudes recibidas (donaciones concedidas a otros)
+  const receivedRequests = receivedRequestsSnap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Omit<ItemRequest, "id">) }))
+    .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+
+  const approvedDonations = receivedRequests.filter(
+    (r) => r.status === "approved" || r.status === "delivered",
+  );
+  const deliveredDonations = receivedRequests.filter((r) => r.status === "delivered");
+
+  const recipients = approvedDonations.map((r) => ({
+    requestId: r.id,
+    itemId: r.itemId,
+    itemTitle: r.itemTitle,
+    applicantId: r.applicantId,
+    applicantName: r.applicantName,
+    applicantEmail: r.applicantEmail,
+    applicantPhone: r.applicantPhone ?? "",
+    status: r.status,
+    requestedAt: r.requestedAt,
+    resolvedAt: r.resolvedAt ?? null,
+    deliveredAt: r.deliveredAt ?? null,
+  }));
+
+  // 3. Solicitudes enviadas (objetos solicitados por el estudiante)
+  const sentRequests = sentRequestsSnap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Omit<ItemRequest, "id">) }))
+    .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+
+  const totalSent = sentRequests.length;
+  const approvedSent = sentRequests.filter((r) => r.status === "approved").length;
+  const pendingSent = sentRequests.filter((r) => r.status === "requested").length;
+  const rejectedSent = sentRequests.filter((r) => r.status === "rejected").length;
+  const deliveredSent = sentRequests.filter((r) => r.status === "delivered").length;
+
+  const requestsMadeList = sentRequests.map((r) => ({
+    requestId: r.id,
+    itemId: r.itemId,
+    itemTitle: r.itemTitle,
+    publisherId: r.publisherId,
+    publisherName: r.publisherName,
+    publisherEmail: r.publisherEmail,
+    status: r.status,
+    requestedAt: r.requestedAt,
+    resolvedAt: r.resolvedAt ?? null,
+    rejectionReason: r.status === "rejected" ? "Rechazada por el publicador / objeto no disponible" : null,
+  }));
+
+  return {
+    publishedItems: {
+      total: totalPub,
+      approved: approvedPub,
+      pending: pendingPub,
+      rejected: rejectedPub,
+      items: publishedItemsList,
+    },
+    donationsGiven: {
+      total: receivedRequests.length,
+      approvedCount: approvedDonations.length,
+      deliveredCount: deliveredDonations.length,
+      recipients,
+    },
+    requestsMade: {
+      total: totalSent,
+      approved: approvedSent,
+      pending: pendingSent,
+      rejected: rejectedSent,
+      delivered: deliveredSent,
+      items: requestsMadeList,
+    },
   };
 }

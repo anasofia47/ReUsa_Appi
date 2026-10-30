@@ -127,9 +127,14 @@ export function createSyncService({ api, repos, now = () => new Date() }: SyncDe
     if (!items) return 0;
     try {
       const res = await api.get<{ items: Item[] }>('/api/items');
-      await items.upsertMany(res.items);
-      return res.items.length;
-    } catch {
+      if (Array.isArray(res.items)) {
+        await items.upsertMany(res.items);
+        return res.items.length;
+      }
+      return 0;
+    } catch (err) {
+      if (err instanceof NetworkError) throw err;
+      console.warn('[sync] error al sincronizar objetos:', err);
       return 0;
     }
   }
@@ -138,9 +143,14 @@ export function createSyncService({ api, repos, now = () => new Date() }: SyncDe
     if (!requests) return 0;
     try {
       const res = await api.get<{ requests: ProductRequest[] }>('/api/requests');
-      await requests.upsertManyFromServer(res.requests);
-      return res.requests.length;
-    } catch {
+      if (Array.isArray(res.requests)) {
+        await requests.upsertManyFromServer(res.requests);
+        return res.requests.length;
+      }
+      return 0;
+    } catch (err) {
+      if (err instanceof NetworkError) throw err;
+      console.warn('[sync] error al sincronizar solicitudes:', err);
       return 0;
     }
   }

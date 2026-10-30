@@ -58,6 +58,17 @@ const iso = z.string().meta({ format: "date-time" });
 
 const GENDERS = ["masculino", "femenino", "otro"] as const;
 
+const NotificationSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  title: z.string(),
+  message: z.string(),
+  type: z.enum(["item_submitted", "item_reviewed", "item_requested", "request_resolved"]),
+  targetPath: z.string(),
+  read: z.boolean(),
+  createdAt: iso,
+});
+
 const User = z.object({
   uid: z.string(),
   email: z.string().meta({ format: "email" }),
@@ -482,6 +493,47 @@ export function buildOpenApiSpec(): Json {
           },
         },
       },
+      "/api/notifications": {
+        get: {
+          tags: ["Notificaciones"],
+          summary: "Lista las notificaciones del usuario",
+          security: bearer,
+          responses: {
+            "200": {
+              description: "Notificaciones del usuario",
+              content: json({
+                type: "object",
+                properties: {
+                  notifications: { type: "array", items: ref("Notification") },
+                  unreadCount: { type: "number" },
+                },
+              }),
+            },
+            "401": r("Unauthorized"),
+          },
+        },
+        post: {
+          tags: ["Notificaciones"],
+          summary: "Marca todas las notificaciones como leídas",
+          security: bearer,
+          responses: {
+            "200": { description: "Notificaciones marcadas como leídas", content: json({ type: "object", properties: { ok: { type: "boolean" } } }) },
+            "401": r("Unauthorized"),
+          },
+        },
+      },
+      "/api/notifications/{id}/read": {
+        patch: {
+          tags: ["Notificaciones"],
+          summary: "Marca una notificación específica como leída",
+          security: bearer,
+          parameters: [idParam],
+          responses: {
+            "200": { description: "Notificación marcada como leída", content: json({ type: "object", properties: { ok: { type: "boolean" } } }) },
+            "401": r("Unauthorized"),
+          },
+        },
+      },
     },
     components: {
       securitySchemes: {
@@ -497,6 +549,7 @@ export function buildOpenApiSpec(): Json {
         AuthResult: toSchema(AuthResult, "output"),
         Item: toSchema(Item, "output"),
         ItemRequest: toSchema(ItemRequest, "output"),
+        Notification: toSchema(NotificationSchema, "output"),
         ErrorBody: toSchema(ErrorBody, "output"),
       },
       responses: RESPONSES,

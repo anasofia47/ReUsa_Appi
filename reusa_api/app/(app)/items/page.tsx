@@ -22,7 +22,7 @@ async function ItemList({
   const wasPublished = first(params.published) === "true";
 
   const [items, categories] = await Promise.all([
-    listItems(user, { q, category, status: "approved" }),
+    listItems(user, { q, category, status: "approved", onlyAvailable: true }),
     listCategories(),
   ]);
 
