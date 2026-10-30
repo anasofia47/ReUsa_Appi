@@ -72,7 +72,9 @@ export async function logoutAction(): Promise<void> {
 
 export async function publishItemAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireWebUser();
-  const parsed = createItemSchema.safeParse(Object.fromEntries(formData));
+  const raw = Object.fromEntries(formData);
+  delete raw.cover;
+  const parsed = createItemSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
 
   const file = formData.get("cover");

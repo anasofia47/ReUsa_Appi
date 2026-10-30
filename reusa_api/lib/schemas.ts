@@ -49,7 +49,7 @@ export const createItemSchema = z
     state: z.string().optional(),
     deliveryPoint: z.string().trim().min(3, "Punto de entrega requerido").max(100).optional(),
     sex: z.string().optional(),
-    cover: coverSchema.optional(),
+    cover: z.any().optional(),
   })
   .transform((data) => {
     let cond = data.condition;
@@ -59,13 +59,20 @@ export const createItemSchema = z
       else if (data.state === "usado_regular" || data.state === "Aceptable") cond = "Aceptable";
       else if (data.state === "Como nuevo") cond = "Como nuevo";
     }
+    const cover =
+      data.cover && typeof data.cover === "object" && "data" in data.cover && typeof data.cover.data === "string"
+        ? {
+            contentType: (data.cover.contentType ?? "image/jpeg") as "image/jpeg" | "image/png" | "image/webp",
+            data: data.cover.data as string,
+          }
+        : undefined;
     return {
       title: data.title,
       description: data.description,
       category: data.category,
       condition: cond ?? "Buen estado",
       deliveryPoint: data.deliveryPoint ?? "Campus TdeA - Biblioteca / Cafetería",
-      cover: data.cover,
+      cover,
     };
   });
 
