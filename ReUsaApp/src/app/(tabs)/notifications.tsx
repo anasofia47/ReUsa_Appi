@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -41,20 +42,16 @@ export default function NotificationsScreen() {
       void markAsRead(item.id);
     }
 
-    // Redirección inteligente según el tipo de notificación y rol
     const path = item.targetPath;
     if (path.includes('/supervisor') || item.type === 'item_submitted') {
-      // Supervisor: abre la pestaña de moderación para aprobar o rechazar de inmediato
       router.navigate({ pathname: '/(tabs)/requests', params: { tab: 'moderation' } });
     } else if (
       path.includes('/requests') ||
       item.type === 'item_requested' ||
       item.type === 'request_resolved'
     ) {
-      // Estudiante: va directo a sus solicitudes / entregas
       router.navigate({ pathname: '/(tabs)/requests', params: { tab: 'requests' } });
     } else if (path.includes('/reports')) {
-      // Estudiante: redirige al perfil para ver reportes y motivos de rechazo
       router.navigate('/(tabs)/profile');
     } else if (path.includes('/items/')) {
       const id = path.split('/items/')[1]?.split('?')[0];
@@ -72,18 +69,28 @@ export default function NotificationsScreen() {
     <Screen>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <ThemedText type="subtitle" accessibilityRole="header">
-            Notificaciones
-          </ThemedText>
+          <View>
+            <View style={[styles.badge, { backgroundColor: theme.primary + '18' }]}>
+              <ThemedText style={[styles.badgeText, { color: theme.primary }]}>
+                🔔 Centro de Notificaciones
+              </ThemedText>
+            </View>
+            <ThemedText type="title" style={styles.screenTitle}>
+              Notificaciones
+            </ThemedText>
+          </View>
           {unreadCount > 0 ? (
-            <Pressable onPress={() => void markAllAsRead()} style={styles.markReadBtn}>
-              <ThemedText type="smallBold" style={{ color: theme.primary, fontSize: 13 }}>
-                Marcar leídas ({unreadCount})
+            <Pressable
+              onPress={() => void markAllAsRead()}
+              style={[styles.markReadBtn, { backgroundColor: theme.primary + '15' }]}>
+              <Ionicons name="checkmark-done" size={16} color={theme.primary} />
+              <ThemedText type="smallBold" style={{ color: theme.primary, fontSize: 12 }}>
+                Leer todas ({unreadCount})
               </ThemedText>
             </Pressable>
           ) : null}
         </View>
-        <ThemedText themeColor="textSecondary" type="small">
+        <ThemedText themeColor="textSecondary" style={styles.subtitle}>
           {user?.role === 'supervisor' || user?.role === 'admin'
             ? 'Alertas de nuevos objetos para moderar y solicitudes en el campus.'
             : 'Avisos de solicitudes recibidas, aprobación de donaciones y moderación.'}
@@ -96,9 +103,16 @@ export default function NotificationsScreen() {
         <FlatList
           data={notifications}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.list, { paddingBottom: BottomTabInset + Spacing.four }]}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: BottomTabInset + Spacing.four },
+          ]}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void onRefresh()}
+              colors={[theme.primary]}
+            />
           }
           ListEmptyComponent={
             <EmptyView
@@ -108,14 +122,14 @@ export default function NotificationsScreen() {
           }
           ItemSeparatorComponent={() => <View style={{ height: Spacing.two }} />}
           renderItem={({ item }) => {
-            const icon =
+            const iconData =
               item.type === 'item_submitted'
-                ? '📦'
+                ? { emoji: '📦', color: '#D97706', bg: '#FEF3C7' }
                 : item.type === 'item_reviewed'
-                ? '✅'
+                ? { emoji: '✅', color: '#059669', bg: '#ECFDF5' }
                 : item.type === 'item_requested'
-                ? '🙋'
-                : '🎉';
+                ? { emoji: '🙋', color: '#2563EB', bg: '#EFF6FF' }
+                : { emoji: '🎉', color: '#7C3AED', bg: '#F5F3FF' };
 
             return (
               <Pressable
@@ -123,39 +137,52 @@ export default function NotificationsScreen() {
                 style={({ pressed }) => [
                   styles.card,
                   {
-                    backgroundColor: item.read ? theme.backgroundElement : theme.primary + '12',
-                    borderColor: item.read ? theme.border : theme.primary + '40',
+                    backgroundColor: item.read
+                      ? theme.backgroundElement
+                      : theme.primary + '0D',
+                    borderColor: item.read ? theme.border : theme.primary + '50',
                   },
-                  pressed && { opacity: 0.85 },
+                  pressed && styles.cardPressed,
                 ]}>
-                <ThemedText style={{ fontSize: 24, marginRight: Spacing.two }}>{icon}</ThemedText>
+                <View style={[styles.iconBox, { backgroundColor: iconData.bg }]}>
+                  <ThemedText style={{ fontSize: 20 }}>{iconData.emoji}</ThemedText>
+                </View>
+
                 <View style={styles.cardContent}>
                   <View style={styles.cardHeader}>
                     <ThemedText
                       type="smallBold"
-                      style={{
-                        flex: 1,
-                        color: item.read ? theme.text : theme.primary,
-                        fontSize: 15,
-                      }}>
+                      style={[
+                        styles.cardTitle,
+                        { color: item.read ? theme.text : theme.primary },
+                      ]}>
                       {item.title}
                     </ThemedText>
-                    {!item.read && <View style={[styles.unreadDot, { backgroundColor: theme.primary }]} />}
+                    {!item.read && (
+                      <View style={[styles.unreadDot, { backgroundColor: theme.primary }]} />
+                    )}
                   </View>
-                  <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 2 }}>
+
+                  <ThemedText type="small" themeColor="textSecondary" style={styles.cardMessage}>
                     {item.message}
                   </ThemedText>
-                  <ThemedText
-                    type="small"
-                    style={{ color: theme.textSecondary, fontSize: 11, marginTop: Spacing.one }}>
-                    {new Date(item.createdAt).toLocaleDateString('es-CO', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </ThemedText>
+
+                  <View style={styles.timeRow}>
+                    <Ionicons name="time-outline" size={12} color={theme.textSecondary} />
+                    <ThemedText
+                      type="small"
+                      style={{ color: theme.textSecondary, fontSize: 11 }}>
+                      {new Date(item.createdAt).toLocaleDateString('es-CO', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </ThemedText>
+                  </View>
                 </View>
+
+                <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} style={{ marginTop: 2 }} />
               </Pressable>
             );
           }}
@@ -167,43 +194,100 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.three,
-    paddingBottom: Spacing.two,
-    gap: Spacing.half,
+    gap: 6,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.one,
   },
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 20,
+    marginBottom: 4,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  screenTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   markReadBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    marginTop: 6,
   },
   list: {
-    paddingHorizontal: Spacing.three,
+    flexGrow: 1,
     paddingTop: Spacing.two,
   },
   card: {
     flexDirection: 'row',
-    padding: Spacing.three,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
     alignItems: 'flex-start',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  cardPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.985 }],
+  },
+  iconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cardContent: {
     flex: 1,
+    gap: 3,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    flex: 1,
+  },
+  cardMessage: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginLeft: Spacing.one,
+    marginLeft: 6,
   },
 });

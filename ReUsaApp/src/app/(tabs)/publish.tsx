@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import {
@@ -29,34 +30,34 @@ import {
 import type { Item, Sex } from '@/types';
 
 const CATEGORY_OPTIONS: SelectOption[] = [
-  { value: 'Libros y Guías', label: 'Libros y Guías', description: 'Textos de estudio, lecturas, apuntes' },
-  { value: 'Tecnología y Calculadoras', label: 'Tecnología y Calculadoras', description: 'Calculadoras científicas, tablets, accesorios' },
-  { value: 'Papelería y Dibujo', label: 'Papelería y Dibujo', description: 'Reglas, compases, cuadernos, colores' },
-  { value: 'Ropa y Uniformes', label: 'Ropa y Uniformes', description: 'Batas de laboratorio, ropa deportiva TdeA' },
-  { value: 'Mobiliario y Accesorios', label: 'Mobiliario y Accesorios', description: 'Maletines, morrales, estuches' },
-  { value: 'Otros', label: 'Otros', description: 'Cualquier otro material universitario' },
+  { value: 'Libros y Guías', label: '📚 Libros y Guías', description: 'Textos de estudio, apuntes, lecturas' },
+  { value: 'Tecnología y Calculadoras', label: '💻 Tecnología y Calculadoras', description: 'Calculadoras, cargadores, accesorios' },
+  { value: 'Papelería y Dibujo', label: '✏️ Papelería y Dibujo', description: 'Reglas, compases, cuadernos, estuches' },
+  { value: 'Ropa y Uniformes', label: '🥼 Ropa y Uniformes', description: 'Batas de laboratorio, ropa institucional' },
+  { value: 'Mobiliario y Accesorios', label: '🎒 Mobiliario y Accesorios', description: 'Morrales, cartucheras, sillas' },
+  { value: 'Otros', label: '📦 Otros', description: 'Cualquier otro material universitario útil' },
 ];
 
 const CONDITION_OPTIONS: SelectOption[] = [
-  { value: 'Nuevo', label: 'Nuevo', description: 'Sin estrenar o en empaque original' },
-  { value: 'Como nuevo', label: 'Como nuevo', description: 'Poco uso, impecable estado' },
-  { value: 'Buen estado', label: 'Buen estado', description: 'Funcional con desgaste mínimo normal' },
-  { value: 'Aceptable', label: 'Aceptable', description: 'Totalmente funcional' },
+  { value: 'Nuevo', label: '✨ Nuevo', description: 'Sin estrenar o en su empaque original' },
+  { value: 'Como nuevo', label: '⭐ Como nuevo', description: 'Poco uso, estado impecable' },
+  { value: 'Buen estado', label: '👍 Buen estado', description: 'Totalmente funcional con desgaste normal' },
+  { value: 'Aceptable', label: '👌 Aceptable', description: 'Funcional para cumplir su objetivo' },
 ];
 
 const DELIVERY_OPTIONS: SelectOption[] = [
-  { value: 'Campus TdeA - Bloque 1 Cafetería', label: 'Bloque 1 - Cafetería central' },
-  { value: 'Campus TdeA - Bloque 2 Biblioteca', label: 'Bloque 2 - Biblioteca' },
-  { value: 'Campus TdeA - Bloque 3 Plazoleta', label: 'Bloque 3 - Plazoleta' },
-  { value: 'Campus TdeA - Bloque 4 Aulas', label: 'Bloque 4 - Aulas' },
-  { value: 'Campus TdeA - Bloque 5 Administrativo', label: 'Bloque 5 - Administrativo' },
-  { value: 'Portería Principal Calle 78B', label: 'Portería Principal - Calle 78B' },
+  { value: 'Campus TdeA - Bloque 1 Cafetería', label: '☕ Bloque 1 - Cafetería central' },
+  { value: 'Campus TdeA - Bloque 2 Biblioteca', label: '📖 Bloque 2 - Biblioteca' },
+  { value: 'Campus TdeA - Bloque 3 Plazoleta', label: '🌳 Bloque 3 - Plazoleta' },
+  { value: 'Campus TdeA - Bloque 4 Aulas', label: '🏫 Bloque 4 - Aulas' },
+  { value: 'Campus TdeA - Bloque 5 Administrativo', label: '🏢 Bloque 5 - Administrativo' },
+  { value: 'Portería Principal Calle 78B', label: '🚪 Portería Principal - Calle 78B' },
 ];
 
 const SEX_OPTIONS: SelectOption<Sex>[] = [
-  { value: 'otro', label: 'Unisex / Cualquier persona', description: 'Sin distinción de género' },
-  { value: 'femenino', label: 'Femenino', description: 'Para estudiantes mujeres' },
-  { value: 'masculino', label: 'Masculino', description: 'Para estudiantes hombres' },
+  { value: 'otro', label: '👥 Unisex / Cualquier persona', description: 'Sin distinción de género' },
+  { value: 'femenino', label: '👩 Femenino', description: 'Para estudiantes mujeres' },
+  { value: 'masculino', label: '👨 Masculino', description: 'Para estudiantes hombres' },
 ];
 
 export default function PublishScreen() {
@@ -82,7 +83,7 @@ export default function PublishScreen() {
       if (err instanceof PermissionDeniedError) {
         Alert.alert(
           'Permiso necesario',
-          'Permite el acceso a la cámara para fotografiar tu donación.',
+          'Permite el acceso a la cámara o galería para fotografiar tu donación.',
           err.canAskAgain
             ? [{ text: 'Entendido' }]
             : [
@@ -91,7 +92,7 @@ export default function PublishScreen() {
               ],
         );
       } else if (err instanceof ImageTooLargeError) {
-        Alert.alert('Imagen muy grande', 'Por favor elige otra fotografía.');
+        Alert.alert('Imagen muy grande', 'Por favor elige otra fotografía más liviana.');
       } else {
         Alert.alert('Error', describeError(err));
       }
@@ -104,7 +105,7 @@ export default function PublishScreen() {
       return;
     }
     if (!description.trim()) {
-      Alert.alert('Faltan datos', 'Ingresa una descripción del objeto.');
+      Alert.alert('Faltan datos', 'Ingresa una breve descripción del objeto.');
       return;
     }
     if (!online) {
@@ -141,7 +142,7 @@ export default function PublishScreen() {
       }
 
       setFeedback(
-        '¡Donación enviada con éxito! Tu publicación quedó registrada y será visible en el catálogo una vez aprobada por el supervisor.',
+        '¡Donación enviada con éxito! Tu objeto pasará por revisión de moderación antes de publicarse en el catálogo.',
       );
       setTitle('');
       setDescription('');
@@ -161,102 +162,197 @@ export default function PublishScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}>
         <ScrollView
-          contentContainerStyle={[styles.form, { paddingBottom: BottomTabInset + Spacing.six }]}
+          contentContainerStyle={[
+            styles.form,
+            { paddingBottom: BottomTabInset + Spacing.six },
+          ]}
           keyboardShouldPersistTaps="handled">
-          <ThemedText type="subtitle" accessibilityRole="header">
-            Publicar Objeto para Donación
-          </ThemedText>
-          <ThemedText themeColor="textSecondary">
-            Dona materiales, libros o tecnología universitaria. Pasará por revisión de moderación
-            antes de publicarse.
-          </ThemedText>
+          {/* Encabezado con estética institucional */}
+          <View style={styles.header}>
+            <View style={[styles.badge, { backgroundColor: theme.primary + '18' }]}>
+              <ThemedText style={[styles.badgeText, { color: theme.primary }]}>
+                🎁 Solidaridad Universitaria
+              </ThemedText>
+            </View>
+            <ThemedText type="title" style={styles.title}>
+              Donar un Objeto
+            </ThemedText>
+            <ThemedText themeColor="textSecondary" style={styles.subtitle}>
+              Comparte libros, útiles, ropa o tecnología que ya no uses. Un supervisor revisará la
+              publicación antes de hacerla pública.
+            </ThemedText>
+          </View>
 
           {feedback ? (
-            <View style={[styles.feedbackBox, { borderColor: theme.success }]}>
-              <ThemedText style={{ color: theme.success }}>{feedback}</ThemedText>
+            <View
+              style={[
+                styles.feedbackBox,
+                { borderColor: theme.success, backgroundColor: theme.success + '15' },
+              ]}>
+              <Ionicons name="checkmark-circle" size={20} color={theme.success} />
+              <ThemedText style={{ color: theme.success, flex: 1, fontSize: 13, fontWeight: '600' }}>
+                {feedback}
+              </ThemedText>
             </View>
           ) : null}
 
-          <TextField
-            label="Título del objeto"
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Ej. Calculadora científica, Bata de laboratorio..."
-          />
+          {/* Tarjeta 1: Información del Objeto */}
+          <View
+            style={[
+              styles.cardSection,
+              {
+                backgroundColor: theme.backgroundElement,
+                borderColor: theme.border,
+              },
+            ]}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="information-circle-outline" size={18} color={theme.primary} />
+              <ThemedText type="smallBold" style={{ fontSize: 15, fontWeight: '700' }}>
+                Información del Objeto
+              </ThemedText>
+            </View>
 
-          <SelectField
-            label="Categoría"
-            value={category}
-            options={CATEGORY_OPTIONS}
-            onChange={setCategory}
-            placeholder="Selecciona una categoría..."
-          />
+            <TextField
+              label="Título o nombre del objeto"
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Ej. Calculadora científica Casio, Bata laboratorio..."
+            />
 
-          <SelectField
-            label="Estado del objeto"
-            value={condition}
-            options={CONDITION_OPTIONS}
-            onChange={setCondition}
-            placeholder="Selecciona el estado..."
-          />
+            <SelectField
+              label="Categoría"
+              value={category}
+              options={CATEGORY_OPTIONS}
+              onChange={setCategory}
+              placeholder="Selecciona una categoría..."
+            />
 
-          <SelectField
-            label="Punto de entrega en el campus TdeA"
-            value={deliveryPoint}
-            options={DELIVERY_OPTIONS}
-            onChange={setDeliveryPoint}
-            placeholder="Selecciona punto de entrega..."
-          />
+            <SelectField
+              label="Estado físico"
+              value={condition}
+              options={CONDITION_OPTIONS}
+              onChange={setCondition}
+              placeholder="Selecciona el estado..."
+            />
 
-          <SelectField<Sex>
-            label="Destinado para sexo"
-            value={sex}
-            options={SEX_OPTIONS}
-            onChange={setSex}
-            placeholder="Selecciona público..."
-          />
+            <SelectField
+              label="Punto de entrega en el campus"
+              value={deliveryPoint}
+              options={DELIVERY_OPTIONS}
+              onChange={setDeliveryPoint}
+              placeholder="Selecciona punto de entrega..."
+            />
 
-          {/* Cámara / Foto */}
-          <View style={styles.section}>
-            <ThemedText type="smallBold">Fotografía del objeto</ThemedText>
+            <SelectField<Sex>
+              label="Destinado para"
+              value={sex}
+              options={SEX_OPTIONS}
+              onChange={setSex}
+              placeholder="Selecciona público..."
+            />
+          </View>
+
+          {/* Tarjeta 2: Fotografía */}
+          <View
+            style={[
+              styles.cardSection,
+              {
+                backgroundColor: theme.backgroundElement,
+                borderColor: theme.border,
+              },
+            ]}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="camera-outline" size={18} color={theme.primary} />
+              <ThemedText type="smallBold" style={{ fontSize: 15, fontWeight: '700' }}>
+                Fotografía del Objeto
+              </ThemedText>
+            </View>
+
             {cover ? (
-              <View style={styles.imagePreview}>
+              <View style={styles.imagePreviewContainer}>
                 <Image
                   source={{ uri: `data:${cover.contentType};base64,${cover.base64}` }}
-                  style={styles.preview}
+                  style={styles.previewImage}
                   contentFit="cover"
                 />
                 <Button
-                  title="Cambiar foto"
+                  title="Cambiar fotografía"
+                  icon="refresh-outline"
                   variant="secondary"
-                  onPress={() => onPickPhoto('camera')}
+                  size="small"
+                  onPress={() => setCover(null)}
                 />
               </View>
             ) : (
-              <View style={styles.photoButtons}>
-                <Button title="📷 Tomar foto" onPress={() => onPickPhoto('camera')} />
-                <Button
-                  title="🖼️ Elegir de la galería"
-                  variant="secondary"
-                  onPress={() => onPickPhoto('library')}
-                />
+              <View
+                style={[
+                  styles.uploadPlaceholder,
+                  { borderColor: theme.border, backgroundColor: theme.background + '80' },
+                ]}>
+                <View style={[styles.cameraCircle, { backgroundColor: theme.primary + '18' }]}>
+                  <Ionicons name="camera" size={28} color={theme.primary} />
+                </View>
+                <ThemedText type="smallBold" style={{ fontSize: 14 }}>
+                  Toma una foto clara o sube una imagen
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 12 }}>
+                  Formatos JPEG, PNG o WebP (máx. 500 KB)
+                </ThemedText>
+                <View style={styles.photoActionsRow}>
+                  <Button
+                    title="Cámara"
+                    icon="camera"
+                    variant="primary"
+                    size="small"
+                    onPress={() => void onPickPhoto('camera')}
+                  />
+                  <Button
+                    title="Galería"
+                    icon="image"
+                    variant="secondary"
+                    size="small"
+                    onPress={() => void onPickPhoto('library')}
+                  />
+                </View>
               </View>
             )}
           </View>
 
-          <TextField
-            label="Descripción detallada"
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Describe las características y condiciones de entrega"
-            multiline
-            numberOfLines={3}
-          />
+          {/* Tarjeta 3: Descripción */}
+          <View
+            style={[
+              styles.cardSection,
+              {
+                backgroundColor: theme.backgroundElement,
+                borderColor: theme.border,
+              },
+            ]}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="document-text-outline" size={18} color={theme.primary} />
+              <ThemedText type="smallBold" style={{ fontSize: 15, fontWeight: '700' }}>
+                Descripción Detallada
+              </ThemedText>
+            </View>
 
+            <TextField
+              label="Detalles y condiciones"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Describe para qué asignatura sirve, si incluye accesorios o detalles del uso..."
+              multiline
+              numberOfLines={4}
+              style={{ minHeight: 90, textAlignVertical: 'top', paddingTop: 10 }}
+            />
+          </View>
+
+          {/* Botón de envío */}
           <Button
-            title="Enviar para aprobación del supervisor"
-            onPress={submit}
+            title="Enviar para Aprobación del Supervisor"
+            icon="checkmark-circle"
+            variant="primary"
+            size="large"
             loading={loading}
+            onPress={submit}
           />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -266,15 +362,90 @@ export default function PublishScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  form: { gap: Spacing.three, paddingVertical: Spacing.two },
-  section: { gap: Spacing.one },
-  photoButtons: { gap: Spacing.two },
-  imagePreview: { alignItems: 'center', gap: Spacing.two },
-  preview: { width: 140, height: 140, borderRadius: 12 },
-  feedbackBox: {
+  form: {
+    gap: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  header: {
+    gap: 6,
+    paddingHorizontal: 2,
+    marginBottom: 4,
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  cardSection: {
     padding: Spacing.three,
+    borderRadius: 20,
     borderWidth: 1,
-    borderRadius: 12,
-    backgroundColor: '#05966915',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  uploadPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.four,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    gap: 6,
+  },
+  cameraCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  photoActionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.two,
+  },
+  imagePreviewContainer: {
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  previewImage: {
+    width: 160,
+    height: 160,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+  },
+  feedbackBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: Spacing.three,
+    borderRadius: 14,
+    borderWidth: 1,
   },
 });

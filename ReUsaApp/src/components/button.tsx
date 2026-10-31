@@ -1,29 +1,57 @@
-import { ActivityIndicator, Pressable, StyleSheet, type PressableProps } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from './themed-text';
 
-type Variant = 'primary' | 'secondary' | 'danger';
+type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
+type Size = 'small' | 'medium' | 'large';
 
 interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> {
   title: string;
   variant?: Variant;
+  size?: Size;
+  icon?: keyof typeof Ionicons.glyphMap;
   loading?: boolean;
 }
 
 export function Button({
   title,
   variant = 'primary',
+  size = 'medium',
+  icon,
   loading = false,
   disabled,
   ...rest
 }: ButtonProps) {
   const theme = useTheme();
   const isDisabled = disabled || loading;
-  const background =
-    variant === 'primary' ? theme.primary : variant === 'danger' ? theme.danger : 'transparent';
-  const color =
-    variant === 'secondary' ? theme.text : variant === 'primary' ? theme.onPrimary : '#FFFFFF';
+
+  const bgMap: Record<Variant, string> = {
+    primary: theme.primary,
+    secondary: theme.backgroundElement,
+    danger: theme.danger,
+    ghost: 'transparent',
+  };
+
+  const textMap: Record<Variant, string> = {
+    primary: theme.onPrimary,
+    secondary: theme.text,
+    danger: '#FFFFFF',
+    ghost: theme.primary,
+  };
+
+  const borderMap: Record<Variant, string> = {
+    primary: 'transparent',
+    secondary: theme.border,
+    danger: 'transparent',
+    ghost: 'transparent',
+  };
+
+  const minHeight = size === 'small' ? 36 : size === 'large' ? 52 : 46;
+  const paddingH = size === 'small' ? Spacing.two : Spacing.four;
+  const fontSize = size === 'small' ? 13 : size === 'large' ? 16 : 14;
+  const iconSize = size === 'small' ? 16 : 18;
 
   return (
     <Pressable
@@ -33,19 +61,38 @@ export function Button({
       style={({ pressed }) => [
         styles.base,
         {
-          backgroundColor: background,
-          borderColor: variant === 'secondary' ? theme.border : background,
+          minHeight,
+          paddingHorizontal: paddingH,
+          backgroundColor: bgMap[variant],
+          borderColor: borderMap[variant],
         },
+        variant === 'primary' && !isDisabled && styles.primaryShadow,
         pressed && styles.pressed,
         isDisabled && styles.disabled,
       ]}
       {...rest}>
       {loading ? (
-        <ActivityIndicator color={color} />
+        <ActivityIndicator color={textMap[variant]} size="small" />
       ) : (
-        <ThemedText type="smallBold" style={{ color, fontSize: 16 }}>
-          {title}
-        </ThemedText>
+        <View style={styles.contentRow}>
+          {icon ? (
+            <Ionicons
+              name={icon}
+              size={iconSize}
+              color={textMap[variant]}
+              style={styles.icon}
+            />
+          ) : null}
+          <ThemedText
+            type="smallBold"
+            style={{
+              color: textMap[variant],
+              fontSize,
+              fontWeight: '600',
+            }}>
+            {title}
+          </ThemedText>
+        </View>
       )}
     </Pressable>
   );
@@ -53,13 +100,31 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 48,
-    paddingHorizontal: Spacing.four,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pressed: { opacity: 0.8 },
-  disabled: { opacity: 0.5 },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  icon: {
+    marginRight: 6,
+  },
+  primaryShadow: {
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  pressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
+  },
+  disabled: {
+    opacity: 0.5,
+  },
 });

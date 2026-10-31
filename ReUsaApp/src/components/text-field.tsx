@@ -16,7 +16,9 @@ export const TextField = forwardRef<any, TextFieldProps>(function TextField(
   const theme = useTheme();
   return (
     <View style={styles.wrapper}>
-      <ThemedText type="smallBold">{label}</ThemedText>
+      <ThemedText type="smallBold" style={styles.label}>
+        {label}
+      </ThemedText>
       <TextInput
         ref={ref}
         accessibilityLabel={label}
@@ -33,7 +35,7 @@ export const TextField = forwardRef<any, TextFieldProps>(function TextField(
         {...rest}
       />
       {error ? (
-        <ThemedText type="small" style={{ color: theme.danger }} accessibilityLiveRegion="polite">
+        <ThemedText type="small" style={{ color: theme.danger, marginTop: 2 }} accessibilityLiveRegion="polite">
           {error}
         </ThemedText>
       ) : null}
@@ -42,12 +44,24 @@ export const TextField = forwardRef<any, TextFieldProps>(function TextField(
 });
 
 const styles = StyleSheet.create({
-  wrapper: { gap: Spacing.one },
+  wrapper: {
+    gap: 6,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 2,
+  },
   input: {
-    minHeight: 48,
+    minHeight: 50,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: Spacing.three,
-    fontSize: 16,
+    fontSize: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
   },
 });

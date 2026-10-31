@@ -167,21 +167,22 @@ export default function RequestsScreen() {
 
         {/* Pestañas de Supervisor */}
         {isSupervisorOrAdmin ? (
-          <View style={styles.tabRow}>
+          <View style={[styles.tabRow, { backgroundColor: theme.border + '60' }]}>
             <Pressable
               onPress={() => setSupervisorTab('moderation')}
               style={[
                 styles.tabBtn,
-                supervisorTab === 'moderation' && {
-                  borderBottomColor: theme.primary,
-                  borderBottomWidth: 3,
-                },
+                supervisorTab === 'moderation' && [
+                  styles.tabBtnActive,
+                  { backgroundColor: theme.backgroundElement },
+                ],
               ]}>
               <ThemedText
                 type="smallBold"
                 style={{
                   color: supervisorTab === 'moderation' ? theme.primary : theme.textSecondary,
-                  fontSize: 14,
+                  fontSize: 13,
+                  fontWeight: supervisorTab === 'moderation' ? '700' : '500',
                 }}>
                 Aprobaciones ({pendingItems.length})
               </ThemedText>
@@ -191,16 +192,17 @@ export default function RequestsScreen() {
               onPress={() => setSupervisorTab('requests')}
               style={[
                 styles.tabBtn,
-                supervisorTab === 'requests' && {
-                  borderBottomColor: theme.primary,
-                  borderBottomWidth: 3,
-                },
+                supervisorTab === 'requests' && [
+                  styles.tabBtnActive,
+                  { backgroundColor: theme.backgroundElement },
+                ],
               ]}>
               <ThemedText
                 type="smallBold"
                 style={{
                   color: supervisorTab === 'requests' ? theme.primary : theme.textSecondary,
-                  fontSize: 14,
+                  fontSize: 13,
+                  fontWeight: supervisorTab === 'requests' ? '700' : '500',
                 }}>
                 Solicitudes de Donación
               </ThemedText>
@@ -208,21 +210,22 @@ export default function RequestsScreen() {
           </View>
         ) : (
           /* Pestañas de Estudiante: Recibidas vs Mis Solicitudes */
-          <View style={styles.tabRow}>
+          <View style={[styles.tabRow, { backgroundColor: theme.border + '60' }]}>
             <Pressable
               onPress={() => setStudentTab('received')}
               style={[
                 styles.tabBtn,
-                studentTab === 'received' && {
-                  borderBottomColor: theme.primary,
-                  borderBottomWidth: 3,
-                },
+                studentTab === 'received' && [
+                  styles.tabBtnActive,
+                  { backgroundColor: theme.backgroundElement },
+                ],
               ]}>
               <ThemedText
                 type="smallBold"
                 style={{
                   color: studentTab === 'received' ? theme.primary : theme.textSecondary,
-                  fontSize: 14,
+                  fontSize: 13,
+                  fontWeight: studentTab === 'received' ? '700' : '500',
                 }}>
                 Peticiones Recibidas ({pendingReceivedCount})
               </ThemedText>
@@ -232,16 +235,17 @@ export default function RequestsScreen() {
               onPress={() => setStudentTab('sent')}
               style={[
                 styles.tabBtn,
-                studentTab === 'sent' && {
-                  borderBottomColor: theme.primary,
-                  borderBottomWidth: 3,
-                },
+                studentTab === 'sent' && [
+                  styles.tabBtnActive,
+                  { backgroundColor: theme.backgroundElement },
+                ],
               ]}>
               <ThemedText
                 type="smallBold"
                 style={{
                   color: studentTab === 'sent' ? theme.primary : theme.textSecondary,
-                  fontSize: 14,
+                  fontSize: 13,
+                  fontWeight: studentTab === 'sent' ? '700' : '500',
                 }}>
                 Mis Solicitudes ({sentRequests.length})
               </ThemedText>
@@ -478,20 +482,28 @@ const styles = StyleSheet.create({
   header: { gap: Spacing.two, paddingTop: Spacing.two, paddingBottom: Spacing.two },
   tabRow: {
     flexDirection: 'row',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ccc',
+    borderRadius: 14,
+    padding: 3,
     marginTop: Spacing.one,
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: Spacing.two,
+    paddingVertical: 9,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 11,
+  },
+  tabBtnActive: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   filters: { flexDirection: 'row', gap: Spacing.two },
   chip: {
-    minHeight: 36,
-    paddingHorizontal: Spacing.three,
+    minHeight: 34,
+    paddingHorizontal: 14,
     borderRadius: 18,
     borderWidth: 1,
     justifyContent: 'center',
@@ -499,9 +511,14 @@ const styles = StyleSheet.create({
   list: { flexGrow: 1, paddingTop: Spacing.two },
   moderationCard: {
     padding: Spacing.three,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     gap: Spacing.two,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
   },
   moderationRow: {
     flexDirection: 'row',

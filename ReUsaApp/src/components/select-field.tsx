@@ -15,6 +15,7 @@ export interface SelectOption<T = string> {
   value: T;
   label: string;
   description?: string;
+  icon?: string;
 }
 
 interface SelectFieldProps<T = string> {
@@ -41,7 +42,9 @@ export function SelectField<T extends string = string>({
 
   return (
     <View style={styles.wrapper}>
-      <ThemedText type="smallBold">{label}</ThemedText>
+      <ThemedText type="smallBold" style={styles.label}>
+        {label}
+      </ThemedText>
 
       <Pressable
         accessibilityRole="combobox"
@@ -53,22 +56,24 @@ export function SelectField<T extends string = string>({
           {
             borderColor: error ? theme.danger : theme.border,
             backgroundColor: theme.backgroundElement,
-            opacity: pressed ? 0.8 : 1,
           },
+          pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] },
         ]}>
         <ThemedText
           style={[
             styles.valueText,
-            !selectedOption && { color: theme.textSecondary },
+            { color: selectedOption ? theme.text : theme.textSecondary },
           ]}
           numberOfLines={1}>
           {selectedOption ? selectedOption.label : placeholder}
         </ThemedText>
-        <Ionicons name="chevron-down" size={18} color={theme.textSecondary} />
+        <View style={[styles.arrowCircle, { backgroundColor: theme.border + '40' }]}>
+          <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
+        </View>
       </Pressable>
 
       {error ? (
-        <ThemedText type="small" style={{ color: theme.danger }}>
+        <ThemedText type="small" style={{ color: theme.danger, marginTop: 2 }}>
           {error}
         </ThemedText>
       ) : null}
@@ -85,20 +90,20 @@ export function SelectField<T extends string = string>({
             style={[
               styles.dialog,
               {
-                backgroundColor: theme.background,
+                backgroundColor: theme.backgroundElement,
                 borderColor: theme.border,
               },
             ]}
             onPress={(e) => e.stopPropagation()}>
             <View style={styles.dialogHeader}>
-              <ThemedText type="subtitle" style={{ fontSize: 18 }}>
+              <ThemedText type="subtitle" style={{ fontSize: 17, fontWeight: '700' }}>
                 {label}
               </ThemedText>
               <Pressable
                 onPress={() => setModalVisible(false)}
-                hitSlop={10}
-                style={styles.closeBtn}>
-                <Ionicons name="close" size={22} color={theme.text} />
+                hitSlop={12}
+                style={[styles.closeBtn, { backgroundColor: theme.border + '50' }]}>
+                <Ionicons name="close" size={18} color={theme.text} />
               </Pressable>
             </View>
 
@@ -106,6 +111,7 @@ export function SelectField<T extends string = string>({
               data={options as SelectOption<T>[]}
               keyExtractor={(item) => item.value}
               contentContainerStyle={styles.optionsList}
+              ItemSeparatorComponent={() => <View style={{ height: 4 }} />}
               renderItem={({ item }) => {
                 const isSelected = item.value === value;
                 return (
@@ -118,24 +124,27 @@ export function SelectField<T extends string = string>({
                       styles.optionItem,
                       {
                         backgroundColor: isSelected
-                          ? theme.primary + '18'
+                          ? theme.primary + '15'
                           : pressed
-                            ? theme.backgroundElement
+                            ? theme.border + '30'
                             : 'transparent',
-                        borderColor: isSelected ? theme.primary : 'transparent',
+                        borderColor: isSelected ? theme.primary + '50' : 'transparent',
                       },
                     ]}>
                     <View style={styles.optionContent}>
                       <ThemedText
                         type={isSelected ? 'smallBold' : 'default'}
-                        style={isSelected ? { color: theme.primary } : undefined}>
+                        style={[
+                          { fontSize: 15 },
+                          isSelected && { color: theme.primary, fontWeight: '700' },
+                        ]}>
                         {item.label}
                       </ThemedText>
                       {item.description ? (
                         <ThemedText
                           type="small"
                           themeColor="textSecondary"
-                          style={{ marginTop: 2 }}>
+                          style={{ marginTop: 2, fontSize: 12 }}>
                           {item.description}
                         </ThemedText>
                       ) : null}
@@ -143,7 +152,7 @@ export function SelectField<T extends string = string>({
                     {isSelected ? (
                       <Ionicons
                         name="checkmark-circle"
-                        size={20}
+                        size={22}
                         color={theme.primary}
                       />
                     ) : null}
@@ -160,51 +169,72 @@ export function SelectField<T extends string = string>({
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: Spacing.one,
+    gap: 6,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 2,
   },
   trigger: {
-    minHeight: 48,
+    minHeight: 50,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: Spacing.three,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
   },
   valueText: {
-    fontSize: 16,
+    fontSize: 15,
     flex: 1,
     marginRight: Spacing.two,
   },
+  arrowCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     justifyContent: 'center',
     padding: Spacing.four,
   },
   dialog: {
-    maxHeight: '80%',
-    borderRadius: 20,
+    maxHeight: '75%',
+    borderRadius: 24,
     borderWidth: 1,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowRadius: 20,
+    elevation: 10,
   },
   dialogHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.four,
+    paddingTop: Spacing.three + 2,
     paddingBottom: Spacing.three,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ccc',
+    borderBottomColor: '#cbd5e1',
   },
   closeBtn: {
-    padding: Spacing.one,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   optionsList: {
     padding: Spacing.two,
@@ -213,11 +243,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.three,
+    paddingVertical: 12,
     paddingHorizontal: Spacing.three,
     borderRadius: 12,
     borderWidth: 1,
-    marginVertical: 3,
   },
   optionContent: {
     flex: 1,
