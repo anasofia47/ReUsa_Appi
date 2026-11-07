@@ -18,7 +18,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.sofia_47.ReUsaApp"
+      "package": "com.sofia_47.ReUsaApp",
+      "versionCode": 1
     },
     "web": {
       "output": "static",
